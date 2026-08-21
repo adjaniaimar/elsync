@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELSYNC — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="brand">ELSYNC</div>
+    <nav class="nav">
+      <button class="nav-item active" data-metric="all">ARUS</button>
+      <button class="nav-item" data-metric="frekuensi">FREKUENSI</button>
+      <button class="nav-item" data-metric="kwh">KWH</button>
+      <button class="nav-item" data-metric="daya">DAYA</button>
+      <button class="nav-item" data-metric="tegangan">TEGANGAN</button>
+    </nav>
+    <button class="logout-btn">
+      <span class="logout-arrow">&gt;</span> LOGOUT
+    </button>
+  </aside>
+
+  <main class="content">
+    <h1 class="page-title">DASHBOARD</h1>
+
+    <section class="card-row">
+      <div class="metric-card" data-metric="arus">
+        <div class="metric-label">ARUS</div>
+        <div class="metric-value"><span id="val-arus">--</span><span class="metric-unit">A</span></div>
+      </div>
+      <div class="metric-card" data-metric="frekuensi">
+        <div class="metric-label">FREKUENSI</div>
+        <div class="metric-value"><span id="val-frekuensi">--</span><span class="metric-unit">Hz</span></div>
+      </div>
+      <div class="metric-card" data-metric="kwh">
+        <div class="metric-label">KWH</div>
+        <div class="metric-value"><span id="val-kwh">--</span><span class="metric-unit">kWh</span></div>
+      </div>
+      <div class="metric-card" data-metric="daya">
+        <div class="metric-label">DAYA</div>
+        <div class="metric-value"><span id="val-daya">--</span><span class="metric-unit">W</span></div>
+      </div>
+      <div class="metric-card" data-metric="tegangan">
+        <div class="metric-label">TEGANGAN</div>
+        <div class="metric-value"><span id="val-tegangan">--</span><span class="metric-unit">V</span></div>
+      </div>
+    </section>
+
+    <h2 class="section-title">REAL TIME DATA</h2>
+    <section class="chart-panel">
+      <svg id="realtimeChart" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
+      <div class="chart-legend" id="chartLegend"></div>
+    </section>
+
+    <h2 class="section-title">LOG POLLING</h2>
+    <section class="log-panel">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>TIMESTAMP</th>
+            <th>ARUS</th>
+            <th>FREKUENSI</th>
+            <th>KWH</th>
+            <th>DAYA</th>
+            <th>TEGANGAN</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+<script src="app.js"></script>
+</body>
+</html>

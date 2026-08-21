@@ -193,5 +193,33 @@ function updateDashboard(reading){
   pushLogRow(ts, reading);
 }
 
-setInterval(() => updateDashboard(simulateReading()), POLL_INTERVAL_MS);
+setInterval(() => {
+  if (!usingLiveData) updateDashboard(simulateReading());
+}, POLL_INTERVAL_MS);
 updateDashboard(simulateReading());
+
+// ===== Live data via Socket.io (falls back to simulation if server is offline) =====
+let usingLiveData = false;
+
+if (typeof io !== 'undefined') {
+  const socket = io();
+
+  socket.on('connect', () => {
+    console.log('[elsync] Connected to server — switching to live Modbus data');
+    usingLiveData = true;
+  });
+
+  socket.on('meterData', (reading) => {
+    usingLiveData = true;
+    updateDashboard(reading);
+  });
+
+  socket.on('meterError', (err) => {
+    console.warn('[elsync] Modbus read error:', err.message);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[elsync] Server disconnected — back to simulated data');
+    usingLiveData = false;
+  });
+}

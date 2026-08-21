@@ -2,7 +2,7 @@
 // TODO: ganti simulateReading() dengan data asli dari backend
 // (Socket.io client -> server Express -> modbus-serial -> CHINT DDSU666)
 const MAX_POINTS = 20;
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
 
 const METRICS = ['arus', 'frekuensi', 'kwh', 'daya', 'tegangan'];
 

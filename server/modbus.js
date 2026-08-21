@@ -1,5 +1,5 @@
 const ModbusRTU = require('modbus-serial');
-const { SERIAL_PORT, BAUD_RATE, PARITY, SLAVE_ID, REGISTERS } = require('./config');
+const { SERIAL_PORT, BAUD_RATE, PARITY, STOP_BITS, SLAVE_ID, REGISTERS } = require('./config');
 
 const client = new ModbusRTU();
 let connected = false;
@@ -9,7 +9,7 @@ async function connect() {
     baudRate: BAUD_RATE,
     parity: PARITY,
     dataBits: 8,
-    stopBits: 1
+    stopBits: STOP_BITS
   });
   client.setID(SLAVE_ID);
   client.setTimeout(1000);

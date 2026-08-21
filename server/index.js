@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// serve the dashboard frontend directly from ../src
+// DASHBOARD SHOWN //
 app.use(express.static(path.join(__dirname, '..', 'src')));
 
 let latestReading = null;

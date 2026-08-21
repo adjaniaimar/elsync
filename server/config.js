@@ -7,7 +7,7 @@ module.exports = {
   SLAVE_ID: 1,
 
   // POLLING //
-  POLL_INTERVAL_MS: 2000,
+  POLL_INTERVAL_MS: 10000,
 
   // HTTP SERVER //
   HTTP_PORT: 3001,

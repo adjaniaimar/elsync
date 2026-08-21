@@ -21,9 +21,7 @@ function isConnected() {
   return connected;
 }
 
-// Convert 2 register (4 byte) response into a float32 value.
-// CHINT meters commonly send big-endian word order (ABCD),
-// but some firmware sends word-swapped (CDAB) — verify with Modbus Poll.
+// CONVERT 2 REGISTERS //
 function bytesToFloat(buffer, byteOrder) {
   if (byteOrder === 'CDAB') {
     const swapped = Buffer.from([buffer[2], buffer[3], buffer[0], buffer[1]]);

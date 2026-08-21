@@ -18,14 +18,15 @@
 *{ box-sizing: border-box; margin:0; padding:0; }
 
 html, body{ width: 100%; min-height: 100vh; }
+button, input, select, textarea{ font-family: inherit; }
 
 body{
-  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background: var(--bg);
   color: var(--text);
 }
 
-/* ===== Sidebar ===== */
+/* SIDEBAR */
 .sidebar{
   width: var(--sidebar-w);
   background: var(--maroon);
@@ -44,15 +45,16 @@ body{
 
 .brand{
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.5px;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
+  padding: 0 6px;
 }
 
 .nav{
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 5px;
   flex: 1;
 }
 
@@ -61,16 +63,22 @@ body{
   border: none;
   color: #fff;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.5px;
   text-align: left;
-  padding: 0;
+  padding: 8px 12px;
   cursor: pointer;
   opacity: 0.85;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  text-transform: uppercase;
+  transition: background .16s ease, color .16s ease, padding-left .16s ease;
+  font-family: 'Montserrat', sans-serif;
 }
 
-.nav-item:hover{ opacity: 1; }
-.nav-item.active{ opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
+.nav-item:hover{ background: rgba(255,255,255,.12); padding-left: 16px; opacity: 1; }
+.nav-item.active{ background: rgba(255,255,255,.18); transform: scale(.97); opacity: 1; }
 
 .logout-btn{
   margin-top: auto;
@@ -86,11 +94,12 @@ body{
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .logout-arrow{ font-weight: 700; }
 
-/* ===== Content ===== */
+/* CONTENT */
 .content{
   margin-left: var(--sidebar-w);
   width: calc(100% - var(--sidebar-w));
@@ -111,7 +120,7 @@ body{
   margin: 28px 0 14px;
 }
 
-/* ===== Metric cards ===== */
+/* CARD HIGHLIGHTS */
 .card-row{
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -160,7 +169,7 @@ body{
   margin-left: 4px;
 }
 
-/* ===== Chart panel ===== */
+/* CHART */
 .chart-panel{
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -174,6 +183,31 @@ body{
   display: block;
 }
 
+.chart-panel{ position: relative; }
+
+.chart-tooltip{
+  position: absolute;
+  top: -6px;
+  background: #1A1410;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  z-index: 5;
+}
+
+.chart-hitlayer{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  cursor: crosshair;
+}
+
 .chart-legend{
   display: flex;
   flex-wrap: wrap;
@@ -183,27 +217,50 @@ body{
   border-top: 1px solid var(--border);
 }
 
+.chart-timestamps{
+  position: relative;
+  height: 14px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.chart-timestamps span{
+  position: absolute;
+  top: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .legend-item{
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px 4px 8px;
+  background: #F7F4F1;
+  transition: background 0.14s ease;
 }
 
+.legend-item:hover{ background: #F0E8E0; }
 .legend-item.hidden{ opacity: 0.35; }
 
 .legend-swatch{
-  width: 14px;
-  height: 3px;
-  border-radius: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
-/* ===== Log panel ===== */
+/* LOG */
 .log-panel{
   background: var(--maroon);
   border-radius: 16px;

@@ -1,7 +1,7 @@
 {
   "name": "elsync-server",
   "version": "1.0.0",
-  "description": "ELSYNC backend — polling CHINT DDSU666 via Modbus RTU, broadcast via Socket.io",
+  "description": "ELSYNC Backend Server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

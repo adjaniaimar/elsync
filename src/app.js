@@ -1,8 +1,6 @@
-// ===== Config =====
-// TODO: ganti simulateReading() dengan data asli dari backend
-// (Socket.io client -> server Express -> modbus-serial -> CHINT DDSU666)
+// CONFIG //
 const MAX_POINTS = 20;
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 10000;
 
 const METRICS = ['arus', 'frekuensi', 'kwh', 'daya', 'tegangan'];
 
@@ -22,12 +20,12 @@ const METRIC_UNITS = {
   tegangan: 'V'
 };
 
-// running state
+// RUNNING STATE //
 let kwhTotal = 142.881;
 const history = { arus: [], frekuensi: [], kwh: [], daya: [], tegangan: [] };
 const labels = [];
 
-// ===== Simulated reading (replace this with real Modbus data) =====
+// SIMULATED DATA //
 function simulateReading(){
   const tegangan = 219 + Math.random() * 3;
   const daya = 470 + Math.random() * 70;
@@ -44,14 +42,14 @@ function simulateReading(){
   };
 }
 
-// ===== Chart setup (native SVG, no external library / no internet needed) =====
+// CHART SETUP //
 const svg = document.getElementById('realtimeChart');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW_W = 1000, VIEW_H = 260, PAD_TOP = 12, PAD_BOTTOM = 24, PAD_X = 4;
 
 const visibleMetrics = new Set(METRICS);
 
-// build gridlines once
+// GRIDLINES //
 function drawGrid(){
   for (let i = 0; i <= 4; i++){
     const y = PAD_TOP + (i / 4) * (VIEW_H - PAD_TOP - PAD_BOTTOM);
@@ -98,9 +96,8 @@ function redrawChart(){
     linePaths[m].style.display = 'block';
     const norm = normalize(data);
     const step = (VIEW_W - PAD_X * 2) / (MAX_POINTS - 1);
-    const offset = MAX_POINTS - data.length;
     const points = norm.map((v, idx) => {
-      const x = PAD_X + (offset + idx) * step;
+      const x = PAD_X + idx * step;
       const y = PAD_TOP + v * (VIEW_H - PAD_TOP - PAD_BOTTOM);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
@@ -108,12 +105,13 @@ function redrawChart(){
   });
 }
 
-// ===== Legend =====
+// LEGEND //
 const legendEl = document.getElementById('chartLegend');
 METRICS.forEach(m => {
   const item = document.createElement('div');
   item.className = 'legend-item';
   item.dataset.metric = m;
+  item.style.borderColor = METRIC_COLORS[m];
   item.innerHTML = `<span class="legend-swatch" style="background:${METRIC_COLORS[m]}"></span>${m.toUpperCase()}`;
   item.addEventListener('click', () => toggleMetric(m));
   legendEl.appendChild(item);
@@ -138,7 +136,7 @@ function setVisibleMetrics(metrics){
   redrawChart();
 }
 
-// ===== Sidebar filter =====
+// SIDEBAR FILTER //
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -149,7 +147,7 @@ navItems.forEach(btn => {
   });
 });
 
-// ===== Card highlight sync with sidebar =====
+// CARD HIGHLIGHT //
 document.querySelectorAll('.metric-card').forEach(card => {
   card.addEventListener('click', () => {
     const metric = card.dataset.metric;
@@ -158,7 +156,7 @@ document.querySelectorAll('.metric-card').forEach(card => {
   });
 });
 
-// ===== Log table =====
+// LOG TABLE //
 const logBody = document.getElementById('logBody');
 function pushLogRow(ts, reading){
   const row = document.createElement('tr');
@@ -174,7 +172,33 @@ function pushLogRow(ts, reading){
   while (logBody.children.length > 8) logBody.removeChild(logBody.lastChild);
 }
 
-// ===== Main loop =====
+// TIMESTAMP AXIS //
+const timestampsEl = document.getElementById('chartTimestamps');
+function updateTimestamps(){
+  timestampsEl.innerHTML = '';
+  if (labels.length < 2) return;
+
+  const maxSlots = 5;
+  const slots = Math.min(maxSlots, labels.length);
+  const step = (labels.length - 1) / (slots - 1);
+
+  for (let i = 0; i < slots; i++){
+    const idx = Math.round(i * step);
+    const percent = (idx / (MAX_POINTS - 1)) * 100;
+
+    const span = document.createElement('span');
+    span.textContent = labels[idx] || '';
+    span.style.left = percent + '%';
+
+    if (percent < 5) span.style.transform = 'translateX(0)';
+    else if (percent > 95) span.style.transform = 'translateX(-100%)';
+    else span.style.transform = 'translateX(-50%)';
+
+    timestampsEl.appendChild(span);
+  }
+}
+
+// MAIN LOOP //
 function updateDashboard(reading){
   METRICS.forEach(m => {
     document.getElementById(`val-${m}`).textContent = reading[m];
@@ -189,6 +213,7 @@ function updateDashboard(reading){
     if (history[m].length > MAX_POINTS) history[m].shift();
   });
   redrawChart();
+  updateTimestamps();
 
   pushLogRow(ts, reading);
 }
@@ -198,7 +223,7 @@ setInterval(() => {
 }, POLL_INTERVAL_MS);
 updateDashboard(simulateReading());
 
-// ===== Live data via Socket.io (falls back to simulation if server is offline) =====
+// LIVE REAL TIME DATA SOCKET.IO //
 let usingLiveData = false;
 
 if (typeof io !== 'undefined') {
@@ -223,3 +248,39 @@ if (typeof io !== 'undefined') {
     usingLiveData = false;
   });
 }
+
+// CHART HOVER TOOLTIP //
+const hitlayer = document.getElementById('chartHitlayer');
+const tooltip = document.getElementById('chartTooltip');
+
+hitlayer.addEventListener('mousemove', (e) => {
+  const rect = hitlayer.getBoundingClientRect();
+  const xRatio = (e.clientX - rect.left) / rect.width;
+  const maxIdx = MAX_POINTS - 1;
+  const idx = Math.max(0, Math.min(maxIdx, Math.round(xRatio * maxIdx)));
+
+  if (idx >= labels.length){
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  METRICS.forEach(m => {
+    if (!visibleMetrics.has(m)) return;
+    const val = history[m][idx];
+    if (val === undefined) return;
+    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+      <span style="width:7px;height:7px;border-radius:50%;background:${METRIC_COLORS[m]}"></span>
+      ${val} ${METRIC_UNITS[m]}
+    </div>`;
+  });
+  tooltip.innerHTML = html || 'No data';
+
+  const xPercent = (idx / maxIdx) * 100;
+  tooltip.style.left = xPercent + '%';
+  tooltip.style.display = 'block';
+});
+
+hitlayer.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});

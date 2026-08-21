@@ -14,7 +14,8 @@
   <aside class="sidebar">
     <div class="brand">ELSYNC</div>
     <nav class="nav">
-      <button class="nav-item active" data-metric="all">ARUS</button>
+      <button class="nav-item active" data-metric="all">DASHBOARD</button>
+      <button class="nav-item" data-metric="arus">ARUS</button>
       <button class="nav-item" data-metric="frekuensi">FREKUENSI</button>
       <button class="nav-item" data-metric="kwh">KWH</button>
       <button class="nav-item" data-metric="daya">DAYA</button>
@@ -53,7 +54,14 @@
 
     <h2 class="section-title">REAL TIME DATA</h2>
     <section class="chart-panel">
-      <svg id="realtimeChart" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
+      <div style="position:relative">
+        <svg id="realtimeChart" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
+        <div class="chart-tooltip" id="chartTooltip"></div>
+        <svg id="chartHitlayer" class="chart-hitlayer" viewBox="0 0 1000 260" preserveAspectRatio="none">
+          <rect x="0" y="0" width="1000" height="260" fill="transparent"/>
+        </svg>
+      </div>
+      <div class="chart-timestamps" id="chartTimestamps"></div>
       <div class="chart-legend" id="chartLegend"></div>
     </section>
 

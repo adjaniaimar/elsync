@@ -1,5 +1,5 @@
 // CONFIG //
-const MAX_POINTS = 20;
+const MAX_POINTS = 10;
 const POLL_INTERVAL_MS = 10000;
 
 const METRICS = ['arus', 'frekuensi', 'kwh', 'daya', 'tegangan'];
@@ -178,8 +178,8 @@ function updateTimestamps(){
   timestampsEl.innerHTML = '';
   if (labels.length < 2) return;
 
-  const maxSlots = 5;
-  const slots = Math.min(maxSlots, labels.length);
+  const maxSlots = MAX_POINTS;
+  const slots = labels.length;
   const step = (labels.length - 1) / (slots - 1);
 
   for (let i = 0; i < slots; i++){

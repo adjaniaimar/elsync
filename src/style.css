@@ -270,6 +270,7 @@ body{
 
 .log-table{
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   color: #fff;
 }
@@ -281,6 +282,18 @@ body{
   letter-spacing: 0.5px;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.4);
+}
+
+.log-table th:nth-child(1),
+.log-table td:nth-child(1){
+  width: 9.1%;
+  text-align: left;
+}
+
+.log-table th:nth-child(n+2),
+.log-table td:nth-child(n+2){
+  width: 18.18%;
+  text-align: center;
 }
 
 .log-table tbody td{

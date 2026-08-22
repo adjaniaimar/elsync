@@ -185,6 +185,20 @@ body{
 
 .chart-panel{ position: relative; }
 
+.disconnected-overlay{
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #C62828;
+  pointer-events: none;
+}
+.disconnected-overlay.show{ display: flex; }
+
 .chart-tooltip{
   position: absolute;
   top: -6px;

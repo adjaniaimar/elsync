@@ -25,23 +25,6 @@ let kwhTotal = 142.881;
 const history = { arus: [], frekuensi: [], kwh: [], daya: [], tegangan: [] };
 const labels = [];
 
-// SIMULATED DATA //
-function simulateReading(){
-  const tegangan = 219 + Math.random() * 3;
-  const daya = 470 + Math.random() * 70;
-  const arus = daya / tegangan;
-  const frekuensi = 49.9 + Math.random() * 0.2;
-  kwhTotal += (daya / 3600 / 1000) * (POLL_INTERVAL_MS / 1000);
-
-  return {
-    arus: +arus.toFixed(2),
-    frekuensi: +frekuensi.toFixed(2),
-    kwh: +kwhTotal.toFixed(3),
-    daya: Math.round(daya),
-    tegangan: +tegangan.toFixed(1)
-  };
-}
-
 // CHART SETUP //
 const svg = document.getElementById('realtimeChart');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -218,34 +201,28 @@ function updateDashboard(reading){
   pushLogRow(ts, reading);
 }
 
-setInterval(() => {
-  if (!usingLiveData) updateDashboard(simulateReading());
-}, POLL_INTERVAL_MS);
-updateDashboard(simulateReading());
+const emptyReading = { arus: 0, frekuensi: 0, kwh: 0, daya: 0, tegangan: 0 };
+updateDashboard(emptyReading);
 
 // LIVE REAL TIME DATA SOCKET.IO //
-let usingLiveData = false;
+const disconnectedOverlay = document.getElementById('disconnectedOverlay');
+disconnectedOverlay.classList.add('show'); // default: belum ada data
 
 if (typeof io !== 'undefined') {
   const socket = io();
 
-  socket.on('connect', () => {
-    console.log('[elsync] Connected to server — switching to live Modbus data');
-    usingLiveData = true;
-  });
-
   socket.on('meterData', (reading) => {
-    usingLiveData = true;
+    disconnectedOverlay.classList.remove('show');
     updateDashboard(reading);
   });
 
-  socket.on('meterError', (err) => {
-    console.warn('[elsync] Modbus read error:', err.message);
+  socket.on('meterError', () => {
+    disconnectedOverlay.classList.add('show');
   });
 
   socket.on('disconnect', () => {
-    console.log('[elsync] Server disconnected — back to simulated data');
-    usingLiveData = false;
+    disconnectedOverlay.classList.add('show');
+    updateDashboard(emptyReading);
   });
 }
 

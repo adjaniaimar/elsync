@@ -5,20 +5,57 @@ const client = new ModbusRTU();
 let connected = false;
 
 async function connect() {
-  await client.connectRTUBuffered(SERIAL_PORT, {
-    baudRate: BAUD_RATE,
-    parity: PARITY,
-    dataBits: 8,
-    stopBits: STOP_BITS
-  });
-  client.setID(SLAVE_ID);
-  client.setTimeout(1000);
-  connected = true;
-  console.log(`[modbus] Connected on ${SERIAL_PORT} @ ${BAUD_RATE}bps, slave id ${SLAVE_ID}`);
+  const RETRY_DELAY_MS = 5000;
+  let attempt = 0;
+
+  while (!connected) {
+    attempt++;
+    try {
+      await client.connectRTUBuffered(SERIAL_PORT, {
+        baudRate: BAUD_RATE,
+        parity: PARITY,
+        dataBits: 8,
+        stopBits: STOP_BITS
+      });
+      client.setID(SLAVE_ID);
+      client.setTimeout(1000);
+      connected = true;
+      console.log(`[modbus] Connected on ${SERIAL_PORT} @ ${BAUD_RATE}bps, slave id ${SLAVE_ID} (percobaan ke-${attempt})`);
+    } catch (err) {
+      console.error(`[modbus] Percobaan ke-${attempt} gagal connect ${SERIAL_PORT}: ${err.message}`);
+      console.error(`[modbus] Kemungkinan port belum siap (misal baru saja boot Windows) atau kabel/power MAX485 bermasalah. Coba lagi dalam ${RETRY_DELAY_MS / 1000} detik...`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
+  }
 }
 
 function isConnected() {
   return connected;
+}
+
+let reconnecting = false;
+
+function closeClient() {
+  return new Promise((resolve) => {
+    try {
+      client.close(() => resolve());
+    } catch (e) {
+      resolve();
+    }
+  });
+}
+
+async function handleDisconnect() {
+  connected = false;
+  if (reconnecting) return;
+  reconnecting = true;
+
+  console.error('[modbus] Koneksi terputus berkali-kali. Menutup port lama dan mencoba reconnect...');
+
+  await closeClient();
+  await connect();
+
+  reconnecting = false;
 }
 
 // CONVERT 2 REGISTERS //
@@ -52,4 +89,4 @@ async function pollOnce() {
   return reading;
 }
 
-module.exports = { connect, isConnected, pollOnce };
+module.exports = { connect, isConnected, pollOnce, handleDisconnect };

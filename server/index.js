@@ -25,14 +25,28 @@ async function startPolling() {
     return;
   }
 
+  let consecutiveFailures = 0;
+  const MAX_FAILURES_BEFORE_RECONNECT = 3;
+
   pollTimer = setInterval(async () => {
+    if (!modbus.isConnected()) {
+      return;
+    }
+
     try {
       const reading = await modbus.pollOnce();
+      consecutiveFailures = 0;
       latestReading = reading;
       io.emit('meterData', reading);
     } catch (err) {
-      console.error('[modbus] Poll error:', err.message);
+      consecutiveFailures++;
+      console.error(`[modbus] Poll error (gagal ke-${consecutiveFailures}/${MAX_FAILURES_BEFORE_RECONNECT}):`, err.message);
       io.emit('meterError', { message: err.message });
+
+      if (consecutiveFailures >= MAX_FAILURES_BEFORE_RECONNECT) {
+        consecutiveFailures = 0;
+        modbus.handleDisconnect();
+      }
     }
   }, POLL_INTERVAL_MS);
 }

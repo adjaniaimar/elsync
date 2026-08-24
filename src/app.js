@@ -1,3 +1,8 @@
+// AUTH GUARD //
+if (!sessionStorage.getItem('elsync_auth')) {
+  window.location.href = 'login.html';
+}
+
 // CONFIG //
 const MAX_POINTS = 10;
 const POLL_INTERVAL_MS = 10000;
@@ -260,4 +265,10 @@ hitlayer.addEventListener('mousemove', (e) => {
 
 hitlayer.addEventListener('mouseleave', () => {
   tooltip.style.display = 'none';
+});
+
+// LOGOUT //
+document.querySelector('.logout-btn').addEventListener('click', () => {
+  sessionStorage.removeItem('elsync_auth');
+  window.location.href = 'login.html';
 });

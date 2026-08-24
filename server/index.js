@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -11,6 +13,23 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.json());
+
+// LOGIN ENDPOINT //
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === process.env.ELSYNC_USER && password === process.env.ELSYNC_PASS) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Username or password is incorrect.' });
+  }
+});
+
+// ROOT ROUTE TO LOGIN PAGE //
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'src', 'login.html'));
+});
+
 // DASHBOARD SHOWN //
 app.use(express.static(path.join(__dirname, '..', 'src')));
 
@@ -22,7 +41,7 @@ async function startPolling() {
     await modbus.connect();
   } catch (err) {
     console.error('[modbus] Failed to connect:', err.message);
-    console.error('[modbus] Cek: kabel RS485, COM port di config.js, dan power ke MAX485 module.');
+    console.error('[modbus] Check: RS485, COM port in config.js, and power to MAX485 module.');
     return;
   }
 

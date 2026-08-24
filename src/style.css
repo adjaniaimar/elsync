@@ -321,3 +321,31 @@ body{
 .log-table tbody tr:first-child td{
   border-top: none;
 }
+
+/* FOOTER */
+.page-footer{
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-w);
+  right: 0;
+
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #F7F4F1;
+  border-top: 1px solid var(--border);
+
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+
+  z-index: 99;
+}
+
+.page-footer strong{
+  color: var(--maroon);
+  font-weight: 700;
+}

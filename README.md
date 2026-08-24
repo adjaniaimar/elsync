@@ -1,4 +1,10 @@
-# ELSYNC
+# KWH DIGITAL IOT PROJECT
+
+## HARDWARE
+### 1. KWH Digital CHINT 1 Phase DDSU666
+### 2. USB-Serial Converter GINKGO EVC8013
+### 3. RS PRO Male USB A to Male USB B Cable USB 2.0
+
 
 ## PROJECT STRUCTURE
 ```
@@ -17,16 +23,16 @@ elsync/
 ## SETUP
 
 ### 1. VALIDATE REGISTER MAP
-Sebelum jalanin server, pastikan kamu sudah tahu:
+Sebelum start server, cross check dan pastikan:
 - Address register untuk Tegangan, Arus, Daya, Frekuensi, kWh
 - Tipe data (kemungkinan besar float32 / 2 register)
-- Byte order (`ABCD` atau `CDAB` — coba dua-duanya kalau nilai yang muncul aneh)
+- Byte order (`ABCD` atau `CDAB`)
 - Scale factor (apakah perlu dikali 0.1, dsb)
 
 ### 2. FILL server/config.js
 Ganti `SERIAL_PORT`, `BAUD_RATE`, `SLAVE_ID`, dan tiap `address`/`byteOrder`/`scale` di `REGISTERS` sesuai Modbus Poll.
 
-### 3. DEPEDENCY INSTALL
+### 3. DEPENDENCY INSTALL
 ```bash
 cd elsync/server
 npm install
@@ -36,7 +42,7 @@ npm install
 ```bash
 npm start
 ```
-Kalau sukses, terminal akan menampilkan:
+Jika sukses, terminal akan menampilkan:
 ```
 ELSYNC server running at http://localhost:3001
 [modbus] Connected on COM3 @ 9600bps, slave id 1

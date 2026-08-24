@@ -4,6 +4,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 const modbus = require('./modbus');
+const { insertReading } = require('./db');
 const { POLL_INTERVAL_MS, HTTP_PORT } = require('./config');
 
 const app = express();
@@ -37,6 +38,14 @@ async function startPolling() {
       const reading = await modbus.pollOnce();
       consecutiveFailures = 0;
       latestReading = reading;
+
+    try {
+      await insertReading(reading);
+      console.log('[mysql] Reading saved:', reading);
+    } catch (err) {
+      console.error('[mysql] Failed to save reading:', err.message);
+    }
+
       io.emit('meterData', reading);
     } catch (err) {
       consecutiveFailures++;

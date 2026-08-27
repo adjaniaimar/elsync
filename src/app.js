@@ -272,3 +272,26 @@ document.querySelector('.logout-btn').addEventListener('click', () => {
   sessionStorage.removeItem('elsync_auth');
   window.location.href = 'login.html';
 });
+
+// WIRING //
+const exportControl = document.getElementById('exportControl');
+const exportBtn = document.getElementById('exportBtn');
+
+exportBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  exportControl.classList.toggle('open');
+});
+document.addEventListener('click', () => exportControl.classList.remove('open'));
+
+document.querySelectorAll('.export-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const format = opt.dataset.format;
+    const link = document.createElement('a');
+    link.href = `/api/logs/export?format=${format}`;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    exportControl.classList.remove('open');
+  });
+});

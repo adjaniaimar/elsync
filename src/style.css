@@ -322,6 +322,40 @@ body{
   border-top: none;
 }
 
+.section-title-row{ display:flex; align-items:center; justify-content:space-between; }
+.export-control{ position: relative; display: flex; }
+.export-btn{
+  display:flex; align-items:center; gap:8px;
+  background: var(--maroon, #6E0D12); color:#fff;
+  border: 1px solid rgba(255,255,255,0.25); border-radius: 10px;
+  padding: 9px 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+  cursor: pointer; transition: background .15s ease;
+}
+.export-btn:hover{ background: #86171D; }
+.export-btn svg{ width:14px; height:14px; flex-shrink:0; }
+.export-btn .chev{ width:10px; height:10px; transition: transform .15s ease; }
+.export-control.open .chev{ transform: rotate(180deg); }
+.export-menu{
+  position:absolute; top: calc(100% + 8px); right: 0; min-width: 190px;
+  background: #fff; border: 1px solid #E7E4E1; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.14); padding: 6px; display:none; z-index: 20;
+}
+.export-control.open .export-menu{ display:block; }
+.export-option{
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:none; border:none; text-align:left; padding: 9px 10px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: #1A1A1A; cursor: pointer; transition: background .12s ease;
+}
+.export-option:hover{ background: #F7F4F1; }
+.export-option .badge{
+  width: 30px; height: 22px; border-radius: 5px; font-size: 9px; font-weight: 800;
+  display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0;
+}
+.badge.json{ background:#2E7D32; }
+.badge.csv{ background:#1565C0; }
+.badge.xlsx{ background:#0F7B3A; }
+.badge.pdf{ background:#C62828; }
+
 /* FOOTER */
 .page-footer{
   position: fixed;

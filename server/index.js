@@ -4,9 +4,12 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
+const { Worker } = require('worker_threads');
 
 const modbus = require('./modbus');
 const { insertReading } = require('./db');
+const { getReadings } = require('./db');
+const exportUtil = require('./export');
 const { POLL_INTERVAL_MS, HTTP_PORT } = require('./config');
 
 const app = express();
@@ -22,6 +25,44 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true });
   } else {
     res.status(401).json({ success: false, message: 'Username or password is incorrect.' });
+  }
+});
+
+app.get('/api/logs/export', async (req, res) => {
+  try {
+    const { format = 'json' } = req.query;
+    const rows = await getReadings();
+    const filename = `elsync-log-${Date.now()}`;
+
+    const worker = new Worker(path.join(__dirname, 'exportWorker.js'), {
+      workerData: { format, rows },
+    });
+
+    worker.once('message', (msg) => {
+      if (!msg.success) {
+        console.error('[export] Worker error:', msg.error);
+        return res.status(500).json({ message: 'Export gagal' });
+      }
+
+      const contentTypes = {
+        json: 'application/json',
+        csv: 'text/csv',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        pdf: 'application/pdf',
+      };
+
+      res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
+      res.send(msg.type === 'buffer' ? Buffer.from(msg.data) : msg.data);
+    });
+
+    worker.once('error', (err) => {
+      console.error('[export] Worker crashed:', err.message);
+      res.status(500).json({ message: 'Export gagal' });
+    });
+  } catch (err) {
+    console.error('[export] Error:', err.message);
+    res.status(500).json({ message: 'Export gagal' });
   }
 });
 

@@ -67,7 +67,22 @@
       <div class="chart-legend" id="chartLegend"></div>
     </section>
 
-    <h2 class="section-title">LOG POLLING</h2>
+    <div class="section-title-row">
+  <h2 class="section-title">LOG POLLING</h2>
+  <div class="export-control" id="exportControl">
+    <button class="export-btn" id="exportBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      EXPORT
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="export-menu" id="exportMenu">
+      <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
+      <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
+      <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
+      <button class="export-option" data-format="pdf"><span class="badge pdf">PDF</span> Export as PDF</button>
+    </div>
+  </div>
+</div>
     <section class="log-panel">
       <table class="log-table">
         <thead>

@@ -19,4 +19,12 @@ async function insertReading(reading) {
   );
 }
 
-module.exports = { insertReading };
+async function getReadings(limit = 1000) {
+  const [rows] = await pool.query(
+    `SELECT id, tegangan, arus, daya, frekuensi, kwh, recorded_at FROM readings ORDER BY recorded_at DESC LIMIT ?`,
+    [limit]
+  );
+  return rows;
+}
+
+module.exports = { insertReading, getReadings };

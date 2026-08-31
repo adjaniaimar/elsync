@@ -149,12 +149,12 @@ const logBody = document.getElementById('logBody');
 function pushLogRow(ts, reading){
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td>${ts}</td>
-    <td>${reading.arus} A</td>
-    <td>${reading.frekuensi} Hz</td>
-    <td>${reading.kwh} kWh</td>
-    <td>${reading.daya} W</td>
-    <td>${reading.tegangan} V</td>
+    <td data-label="TIMESTAMP">${ts}</td>
+    <td data-label="ARUS">${reading.arus} A</td>
+    <td data-label="FREKUENSI">${reading.frekuensi} Hz</td>
+    <td data-label="KWH">${reading.kwh} kWh</td>
+    <td data-label="DAYA">${reading.daya} W</td>
+    <td data-label="TEGANGAN">${reading.tegangan} V</td>
   `;
   logBody.prepend(row);
   while (logBody.children.length > 8) logBody.removeChild(logBody.lastChild);
@@ -174,8 +174,11 @@ function updateTimestamps(){
     const idx = Math.round(i * step);
     const percent = (idx / (MAX_POINTS - 1)) * 100;
 
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const fullLabel = labels[idx] || '';
+
     const span = document.createElement('span');
-    span.textContent = labels[idx] || '';
+    span.textContent = isMobile ? fullLabel.slice(-2) : fullLabel;
     span.style.left = percent + '%';
 
     if (percent < 5) span.style.transform = 'translateX(0)';
@@ -268,9 +271,11 @@ hitlayer.addEventListener('mouseleave', () => {
 });
 
 // LOGOUT //
-document.querySelector('.logout-btn').addEventListener('click', () => {
-  sessionStorage.removeItem('elsync_auth');
-  window.location.href = 'login.html';
+document.querySelectorAll('.logout-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    sessionStorage.removeItem('elsync_auth');
+    window.location.href = 'login.html';
+  });
 });
 
 // WIRING //

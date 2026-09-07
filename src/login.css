@@ -48,12 +48,17 @@ body{
 }
 
 .login-title{
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: .5px;
   text-align: center;
-  margin-bottom: 8px;
-  color: var(--maroon);
+  margin-top: -20px;
+  margin-bottom: 10px;
+}
+
+.login-title img{
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
 }
 
 .login-sub{

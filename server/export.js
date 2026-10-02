@@ -31,11 +31,26 @@ function toJSON(rows) {
 }
 
 // CSV //
+// Escape a cell so spreadsheet apps can't interpret it as a formula, and so
+// commas/quotes/newlines don't break the row. Plain numbers (incl. negatives)
+// are left as numbers so they still import as numeric values.
+function csvCell(value) {
+  let s = value == null ? '' : String(value);
+  const isPlainNumber = /^-?\d+(\.\d+)?$/.test(s);
+  if (!isPlainNumber && /^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  if (/[",\n\r]/.test(s)) {
+    s = '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
 function toCSV(rows) {
   const formatted = prepareRows(rows);
-  const header = COLUMNS.map(c => c.label).join(',');
+  const header = COLUMNS.map(c => csvCell(c.label)).join(',');
   const lines = formatted.map(row =>
-    COLUMNS.map(c => row[c.key]).join(',')
+    COLUMNS.map(c => csvCell(row[c.key])).join(',')
   );
   return [header, ...lines].join('\n');
 }

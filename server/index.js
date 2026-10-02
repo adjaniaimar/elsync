@@ -12,14 +12,16 @@ const { Server } = require('socket.io');
 const { Worker } = require('worker_threads');
 
 const modbus = require('./modbus');
-const { insertReading } = require('./db');
-const { getReadings } = require('./db');
-const exportUtil = require('./export');
+const { insertReading, getReadings, closePool } = require('./db');
 const { POLL_INTERVAL_MS, HTTP_PORT } = require('./config');
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1);
+// No reverse proxy sits in front of this server, so X-Forwarded-For must NOT be
+// trusted — otherwise a client could spoof it to rotate its apparent IP and bypass
+// the login rate limiter. If you later run behind nginx/traefik, set this to the
+// number of proxy hops instead (e.g. app.set('trust proxy', 1)).
+app.set('trust proxy', false);
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -157,6 +159,7 @@ app.get('/', (req, res) => {
 
 // ---- EXPORT (protected) ---- //
 const ALLOWED_FORMATS = new Set(['json', 'csv', 'xlsx', 'pdf']);
+const EXPORT_TIMEOUT_MS = 30000;
 
 app.get('/api/logs/export', requireAuth, async (req, res) => {
   try {
@@ -172,10 +175,26 @@ app.get('/api/logs/export', requireAuth, async (req, res) => {
       workerData: { format, rows },
     });
 
+    // Ensure the request is answered exactly once, the worker is always torn
+    // down, and a hung worker can't leave the request open forever.
+    let settled = false;
+    const finish = (respond) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      worker.terminate();
+      respond();
+    };
+
+    const timer = setTimeout(() => {
+      console.error('[export] Worker timed out after', EXPORT_TIMEOUT_MS, 'ms');
+      finish(() => res.status(503).json({ message: 'Export timeout' }));
+    }, EXPORT_TIMEOUT_MS);
+
     worker.once('message', (msg) => {
       if (!msg.success) {
         console.error('[export] Worker error:', msg.error);
-        return res.status(500).json({ message: 'Export gagal' });
+        return finish(() => res.status(500).json({ message: 'Export gagal' }));
       }
 
       const contentTypes = {
@@ -185,14 +204,16 @@ app.get('/api/logs/export', requireAuth, async (req, res) => {
         pdf: 'application/pdf',
       };
 
-      res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
-      res.send(msg.type === 'buffer' ? Buffer.from(msg.data) : msg.data);
+      finish(() => {
+        res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
+        res.send(msg.type === 'buffer' ? Buffer.from(msg.data) : msg.data);
+      });
     });
 
     worker.once('error', (err) => {
       console.error('[export] Worker crashed:', err.message);
-      res.status(500).json({ message: 'Export gagal' });
+      finish(() => res.status(500).json({ message: 'Export gagal' }));
     });
   } catch (err) {
     console.error('[export] Error:', err.message);
@@ -220,6 +241,7 @@ io.use((socket, next) => {
 
 let latestReading = null;
 let pollTimer = null;
+let pollingStopped = false;
 
 async function startPolling() {
   try {
@@ -233,9 +255,16 @@ async function startPolling() {
   let consecutiveFailures = 0;
   const MAX_FAILURES_BEFORE_RECONNECT = 3;
 
-  pollTimer = setInterval(async () => {
+  // Schedule the next poll only after the current one fully settles, so polls
+  // never overlap on the (non-reentrant) serial client even if a read runs long.
+  const scheduleNext = () => {
+    if (pollingStopped) return;
+    pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+  };
+
+  async function poll() {
     if (!modbus.isConnected()) {
-      return;
+      return scheduleNext();
     }
 
     try {
@@ -243,12 +272,12 @@ async function startPolling() {
       consecutiveFailures = 0;
       latestReading = reading;
 
-    try {
-      await insertReading(reading);
-      console.log('[mysql] Reading saved:', reading);
-    } catch (err) {
-      console.error('[mysql] Failed to save reading:', err.message);
-    }
+      try {
+        await insertReading(reading);
+        console.log('[mysql] Reading saved:', reading);
+      } catch (err) {
+        console.error('[mysql] Failed to save reading:', err.message);
+      }
 
       io.emit('meterData', reading);
     } catch (err) {
@@ -258,10 +287,14 @@ async function startPolling() {
 
       if (consecutiveFailures >= MAX_FAILURES_BEFORE_RECONNECT) {
         consecutiveFailures = 0;
-        modbus.handleDisconnect();
+        await modbus.handleDisconnect();
       }
+    } finally {
+      scheduleNext();
     }
-  }, POLL_INTERVAL_MS);
+  }
+
+  poll();
 }
 
 io.on('connection', (socket) => {
@@ -278,7 +311,24 @@ server.listen(HTTP_PORT, () => {
   startPolling();
 });
 
-process.on('SIGINT', () => {
-  if (pollTimer) clearInterval(pollTimer);
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} received, closing gracefully...`);
+
+  pollingStopped = true;
+  if (pollTimer) clearTimeout(pollTimer);
+
+  // Force-exit if any close hangs, so pm2 restarts aren't held up.
+  const forceExit = setTimeout(() => process.exit(0), 5000);
+  forceExit.unref();
+
+  try { await modbus.close(); } catch (err) { console.error('[shutdown] modbus:', err.message); }
+  try { await closePool(); } catch (err) { console.error('[shutdown] db pool:', err.message); }
+  io.close();
   server.close(() => process.exit(0));
-});
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

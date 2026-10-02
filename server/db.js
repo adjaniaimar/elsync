@@ -38,4 +38,8 @@ async function getReadings(limit = 1000) {
   return rows;
 }
 
-module.exports = { insertReading, getReadings };
+async function closePool() {
+  await pool.end();
+}
+
+module.exports = { insertReading, getReadings, closePool };

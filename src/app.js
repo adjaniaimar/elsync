@@ -1,7 +1,6 @@
-// AUTH GUARD //
-if (!sessionStorage.getItem('elsync_auth')) {
-  window.location.href = 'login.html';
-}
+// Auth is enforced server-side: the backend gates index.html / app.js behind a
+// session cookie and redirects unauthenticated requests to the login page, so no
+// client-side guard is needed here.
 
 // CONFIG //
 const MAX_POINTS = 10;
@@ -26,7 +25,6 @@ const METRIC_UNITS = {
 };
 
 // RUNNING STATE //
-let kwhTotal = 142.881;
 const history = { arus: [], frekuensi: [], kwh: [], daya: [], tegangan: [] };
 const labels = [];
 
@@ -166,7 +164,6 @@ function updateTimestamps(){
   timestampsEl.innerHTML = '';
   if (labels.length < 2) return;
 
-  const maxSlots = MAX_POINTS;
   const slots = labels.length;
   const step = (labels.length - 1) / (slots - 1);
 
@@ -273,7 +270,6 @@ hitlayer.addEventListener('mouseleave', () => {
 // LOGOUT //
 document.querySelectorAll('.logout-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    sessionStorage.removeItem('elsync_auth');
     fetch('/api/logout', { method: 'POST' })
       .catch(() => {})
       .finally(() => { window.location.href = 'login.html'; });

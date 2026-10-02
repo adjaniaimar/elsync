@@ -40,7 +40,6 @@ fetch('/api/login', {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      sessionStorage.setItem('elsync_auth', '1');
       window.location.href = 'index.html';
     } else {
       errorBox.textContent = data.message || 'Login failed.';

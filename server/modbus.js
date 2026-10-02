@@ -3,12 +3,13 @@ const { SERIAL_PORT, BAUD_RATE, PARITY, STOP_BITS, SLAVE_ID, REGISTERS } = requi
 
 const client = new ModbusRTU();
 let connected = false;
+let stopping = false;
 
 async function connect() {
   const RETRY_DELAY_MS = 5000;
   let attempt = 0;
 
-  while (!connected) {
+  while (!connected && !stopping) {
     attempt++;
     try {
       await client.connectRTUBuffered(SERIAL_PORT, {
@@ -58,6 +59,14 @@ async function handleDisconnect() {
   reconnecting = false;
 }
 
+// Called on shutdown: stop any retry loop and release the serial port so the OS
+// (Windows in particular) doesn't leave COM locked for the next process.
+async function close() {
+  stopping = true;
+  connected = false;
+  await closeClient();
+}
+
 // CONVERT 2 REGISTERS //
 function bytesToFloat(buffer, byteOrder) {
   if (byteOrder === 'CDAB') {
@@ -89,4 +98,4 @@ async function pollOnce() {
   return reading;
 }
 
-module.exports = { connect, isConnected, pollOnce, handleDisconnect };
+module.exports = { connect, isConnected, pollOnce, handleDisconnect, close };

@@ -1,11 +1,22 @@
 const mysql = require('mysql2/promise');
 
+const DB_USER = process.env.DB_USER || 'root';
+const DB_PASS = process.env.DB_PASS || '';
+
+if (DB_USER === 'root' || DB_PASS === '') {
+  console.warn(
+    '[security] Database is using the root account and/or an empty password. ' +
+    'Create a dedicated MySQL user with only INSERT/SELECT on elsync_db and set ' +
+    'DB_USER/DB_PASS in server/.env.'
+  );
+}
+
 const pool = mysql.createPool({
-  host: 'localhost',
-  port: 3306,
-  user: 'root',
-  password: '',
-  database: 'elsync_db',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 3306,
+  user: DB_USER,
+  password: DB_PASS,
+  database: process.env.DB_NAME || 'elsync_db',
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 0

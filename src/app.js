@@ -274,7 +274,9 @@ hitlayer.addEventListener('mouseleave', () => {
 document.querySelectorAll('.logout-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     sessionStorage.removeItem('elsync_auth');
-    window.location.href = 'login.html';
+    fetch('/api/logout', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => { window.location.href = 'login.html'; });
   });
 });
 

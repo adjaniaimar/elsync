@@ -1,8 +1,4 @@
-// Auth is enforced server-side: the backend gates index.html / app.js behind a
-// session cookie and redirects unauthenticated requests to the login page, so no
-// client-side guard is needed here.
-
-// CONFIG //
+// CONFIG
 const MAX_POINTS = 10;
 const POLL_INTERVAL_MS = 10000;
 
@@ -24,18 +20,18 @@ const METRIC_UNITS = {
   tegangan: 'V'
 };
 
-// RUNNING STATE //
+// RUNNING STATE
 const history = { arus: [], frekuensi: [], kwh: [], daya: [], tegangan: [] };
 const labels = [];
 
-// CHART SETUP //
+// CHART SETUP
 const svg = document.getElementById('realtimeChart');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW_W = 1000, VIEW_H = 260, PAD_TOP = 12, PAD_BOTTOM = 24, PAD_X = 4;
 
 const visibleMetrics = new Set(METRICS);
 
-// GRIDLINES //
+// GRIDLINES
 function drawGrid(){
   for (let i = 0; i <= 4; i++){
     const y = PAD_TOP + (i / 4) * (VIEW_H - PAD_TOP - PAD_BOTTOM);
@@ -91,7 +87,7 @@ function redrawChart(){
   });
 }
 
-// LEGEND //
+// LEGEND
 const legendEl = document.getElementById('chartLegend');
 METRICS.forEach(m => {
   const item = document.createElement('div');
@@ -122,7 +118,7 @@ function setVisibleMetrics(metrics){
   redrawChart();
 }
 
-// SIDEBAR FILTER //
+// SIDEBAR FILTER
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -133,7 +129,7 @@ navItems.forEach(btn => {
   });
 });
 
-// CARD HIGHLIGHT //
+// CARD HIGHLIGHT
 document.querySelectorAll('.metric-card').forEach(card => {
   card.addEventListener('click', () => {
     const metric = card.dataset.metric;
@@ -142,7 +138,7 @@ document.querySelectorAll('.metric-card').forEach(card => {
   });
 });
 
-// LOG TABLE //
+// LOG TABLE
 const logBody = document.getElementById('logBody');
 function pushLogRow(ts, reading){
   const row = document.createElement('tr');
@@ -158,7 +154,7 @@ function pushLogRow(ts, reading){
   while (logBody.children.length > 8) logBody.removeChild(logBody.lastChild);
 }
 
-// TIMESTAMP AXIS //
+// TIMESTAMP AXIS
 const timestampsEl = document.getElementById('chartTimestamps');
 function updateTimestamps(){
   timestampsEl.innerHTML = '';
@@ -186,10 +182,15 @@ function updateTimestamps(){
   }
 }
 
-// MAIN LOOP //
+// MAIN LOOP
+const subValueEls = document.querySelectorAll('.metric-sub [data-key]');
+
 function updateDashboard(reading){
   METRICS.forEach(m => {
     document.getElementById(`val-${m}`).textContent = reading[m];
+  });
+  subValueEls.forEach(el => {
+    el.textContent = reading[el.dataset.key] ?? '--';
   });
 
   const ts = new Date().toTimeString().slice(0, 8);
@@ -209,9 +210,9 @@ function updateDashboard(reading){
 const emptyReading = { arus: 0, frekuensi: 0, kwh: 0, daya: 0, tegangan: 0 };
 updateDashboard(emptyReading);
 
-// LIVE REAL TIME DATA SOCKET.IO //
+// LIVE REAL TIME DATA SOCKET.IO
 const disconnectedOverlay = document.getElementById('disconnectedOverlay');
-disconnectedOverlay.classList.add('show'); // default: belum ada data
+disconnectedOverlay.classList.add('show');
 
 if (typeof io !== 'undefined') {
   const socket = io();
@@ -231,7 +232,7 @@ if (typeof io !== 'undefined') {
   });
 }
 
-// CHART HOVER TOOLTIP //
+// CHART HOVER TOOLTIP
 const hitlayer = document.getElementById('chartHitlayer');
 const tooltip = document.getElementById('chartTooltip');
 
@@ -267,7 +268,7 @@ hitlayer.addEventListener('mouseleave', () => {
   tooltip.style.display = 'none';
 });
 
-// LOGOUT //
+// LOGOUT
 document.querySelectorAll('.logout-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     fetch('/api/logout', { method: 'POST' })
@@ -276,7 +277,7 @@ document.querySelectorAll('.logout-btn').forEach(btn => {
   });
 });
 
-// WIRING //
+// WIRING
 const exportControl = document.getElementById('exportControl');
 const exportBtn = document.getElementById('exportBtn');
 

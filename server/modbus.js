@@ -1,9 +1,15 @@
 const ModbusRTU = require('modbus-serial');
-const { SERIAL_PORT, BAUD_RATE, PARITY, STOP_BITS, SLAVE_ID, REGISTERS } = require('./config');
+const { METER_HOST, METER_PORT, MODBUS_MODE, SLAVE_ID, MODBUS_TIMEOUT_MS, REGISTERS } = require('./config');
 
 const client = new ModbusRTU();
 let connected = false;
 let stopping = false;
+
+function openConnection() {
+  const opts = { port: METER_PORT };
+  if (MODBUS_MODE === 'rtu-over-tcp') return client.connectTcpRTUBuffered(METER_HOST, opts);
+  return client.connectTCP(METER_HOST, opts);
+}
 
 async function connect() {
   const RETRY_DELAY_MS = 5000;
@@ -12,19 +18,14 @@ async function connect() {
   while (!connected && !stopping) {
     attempt++;
     try {
-      await client.connectRTUBuffered(SERIAL_PORT, {
-        baudRate: BAUD_RATE,
-        parity: PARITY,
-        dataBits: 8,
-        stopBits: STOP_BITS
-      });
+      await openConnection();
       client.setID(SLAVE_ID);
-      client.setTimeout(1000);
+      client.setTimeout(MODBUS_TIMEOUT_MS);
       connected = true;
-      console.log(`[modbus] Connected on ${SERIAL_PORT} @ ${BAUD_RATE}bps, slave id ${SLAVE_ID} (percobaan ke-${attempt})`);
+      console.log(`[modbus] Connected ke ${METER_HOST}:${METER_PORT} (${MODBUS_MODE}), slave id ${SLAVE_ID} (percobaan ke-${attempt})`);
     } catch (err) {
-      console.error(`[modbus] Percobaan ke-${attempt} gagal connect ${SERIAL_PORT}: ${err.message}`);
-      console.error(`[modbus] Kemungkinan port belum siap (misal baru saja boot Windows) atau kabel/power MAX485 bermasalah. Coba lagi dalam ${RETRY_DELAY_MS / 1000} detik...`);
+      console.error(`[modbus] Percobaan ke-${attempt} gagal connect ${METER_HOST}:${METER_PORT}: ${err.message}`);
+      console.error(`[modbus] Cek: DR302 menyala, kabel LAN, IP/port di config.js, dan PC satu subnet dengan DR302. Coba lagi dalam ${RETRY_DELAY_MS / 1000} detik...`);
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
     }
   }
@@ -38,9 +39,12 @@ let reconnecting = false;
 
 function closeClient() {
   return new Promise((resolve) => {
+    if (!client.isOpen) return resolve();
+    const timer = setTimeout(resolve, 2000);
     try {
-      client.close(() => resolve());
+      client.close(() => { clearTimeout(timer); resolve(); });
     } catch (e) {
+      clearTimeout(timer);
       resolve();
     }
   });
@@ -59,15 +63,13 @@ async function handleDisconnect() {
   reconnecting = false;
 }
 
-// Called on shutdown: stop any retry loop and release the serial port so the OS
-// (Windows in particular) doesn't leave COM locked for the next process.
 async function close() {
   stopping = true;
   connected = false;
   await closeClient();
 }
 
-// CONVERT 2 REGISTERS //
+// CONVERT 2 REGISTERS
 function bytesToFloat(buffer, byteOrder) {
   if (byteOrder === 'CDAB') {
     const swapped = Buffer.from([buffer[2], buffer[3], buffer[0], buffer[1]]);
@@ -90,12 +92,20 @@ async function readMetric(key, reg) {
   return +value.toFixed(reg.decimals ?? 2);
 }
 
+function addSummary(r) {
+  const avg = (a, b, c) => +((a + b + c) / 3).toFixed(2);
+  r.tegangan = avg(r.tegangan_r, r.tegangan_s, r.tegangan_t);
+  r.arus = avg(r.arus_r, r.arus_s, r.arus_t);
+  r.daya = r.daya_total;
+  return r;
+}
+
 async function pollOnce() {
   const reading = {};
   for (const [key, reg] of Object.entries(REGISTERS)) {
     reading[key] = await readMetric(key, reg);
   }
-  return reading;
+  return addSummary(reading);
 }
 
 module.exports = { connect, isConnected, pollOnce, handleDisconnect, close };

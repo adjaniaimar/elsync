@@ -22,17 +22,24 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+const COLUMNS_3P = [
+  'tegangan_r', 'tegangan_s', 'tegangan_t',
+  'arus_r', 'arus_s', 'arus_t',
+  'daya_r', 'daya_s', 'daya_t', 'daya_total',
+  'pf', 'frekuensi', 'kwh'
+];
+
 async function insertReading(reading) {
-  const { tegangan, arus, daya, frekuensi, kwh } = reading;
+  const placeholders = COLUMNS_3P.map(() => '?').join(', ');
   await pool.query(
-    `INSERT INTO readings (tegangan, arus, daya, frekuensi, kwh) VALUES (?, ?, ?, ?, ?)`,
-    [tegangan, arus, daya, frekuensi, kwh]
+    `INSERT INTO readings_3p (${COLUMNS_3P.join(', ')}) VALUES (${placeholders})`,
+    COLUMNS_3P.map((c) => reading[c])
   );
 }
 
 async function getReadings(limit = 1000) {
   const [rows] = await pool.query(
-    `SELECT id, tegangan, arus, daya, frekuensi, kwh, recorded_at FROM readings ORDER BY recorded_at DESC LIMIT ?`,
+    `SELECT id, ${COLUMNS_3P.join(', ')}, recorded_at FROM readings_3p ORDER BY recorded_at DESC LIMIT ?`,
     [limit]
   );
   return rows;

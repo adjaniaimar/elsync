@@ -6,7 +6,7 @@ const pwInput = document.getElementById('password');
 const pwToggle = document.getElementById('pwToggle');
 const eyeIcon = document.getElementById('eyeIcon');
 
-// TOGGLE SHOW/HIDE PASSWORD //
+// TOGGLE SHOW/HIDE PASSWORD
 pwToggle.addEventListener('click', () => {
   const isHidden = pwInput.type === 'password';
   pwInput.type = isHidden ? 'text' : 'password';
@@ -15,7 +15,7 @@ pwToggle.addEventListener('click', () => {
     : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/>';
 });
 
-// LOGIN SUBMIT //
+// LOGIN SUBMIT
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   errorBox.classList.remove('show');

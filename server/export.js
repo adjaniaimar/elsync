@@ -3,14 +3,22 @@ const PDFDocument = require('pdfkit');
 
 const COLUMNS = [
   { key: 'recorded_at', label: 'Timestamp' },
-  { key: 'arus', label: 'Arus (A)' },
+  { key: 'tegangan_r', label: 'Tegangan R (V)' },
+  { key: 'tegangan_s', label: 'Tegangan S (V)' },
+  { key: 'tegangan_t', label: 'Tegangan T (V)' },
+  { key: 'arus_r', label: 'Arus R (A)' },
+  { key: 'arus_s', label: 'Arus S (A)' },
+  { key: 'arus_t', label: 'Arus T (A)' },
+  { key: 'daya_r', label: 'Daya R (W)' },
+  { key: 'daya_s', label: 'Daya S (W)' },
+  { key: 'daya_t', label: 'Daya T (W)' },
+  { key: 'daya_total', label: 'Daya Total (W)' },
+  { key: 'pf', label: 'PF' },
   { key: 'frekuensi', label: 'Frekuensi (Hz)' },
   { key: 'kwh', label: 'KWH (kWh)' },
-  { key: 'daya', label: 'Daya (W)' },
-  { key: 'tegangan', label: 'Tegangan (V)' },
 ];
 
-// FORMAT DATE //
+// FORMAT DATE
 function formatTimestamp(value) {
   const d = new Date(value);
   if (isNaN(d.getTime())) return String(value);
@@ -25,15 +33,12 @@ function prepareRows(rows) {
   }));
 }
 
-// JSON //
+// JSON
 function toJSON(rows) {
   return JSON.stringify(prepareRows(rows), null, 2);
 }
 
-// CSV //
-// Escape a cell so spreadsheet apps can't interpret it as a formula, and so
-// commas/quotes/newlines don't break the row. Plain numbers (incl. negatives)
-// are left as numbers so they still import as numeric values.
+// CSV
 function csvCell(value) {
   let s = value == null ? '' : String(value);
   const isPlainNumber = /^-?\d+(\.\d+)?$/.test(s);
@@ -55,13 +60,13 @@ function toCSV(rows) {
   return [header, ...lines].join('\n');
 }
 
-// EXCEL //
+// EXCEL
 async function toExcel(rows) {
   const formatted = prepareRows(rows);
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Log Polling');
 
-  sheet.columns = COLUMNS.map(c => ({ header: c.label, key: c.key, width: 20 }));
+  sheet.columns = COLUMNS.map(c => ({ header: c.label, key: c.key, width: 16 }));
   sheet.getRow(1).fill = {
     type: 'pattern',
     pattern: 'solid',
@@ -74,7 +79,7 @@ async function toExcel(rows) {
   return workbook.xlsx.writeBuffer();
 }
 
-// PDF //
+// PDF
 function toPDF(rows) {
   const formatted = prepareRows(rows);
 
@@ -92,22 +97,23 @@ function toPDF(rows) {
 
     const startX = 30;
     let y = doc.y;
-    const colWidths = [110, 90, 100, 90, 90, 100];
+    const colWidths = [104, ...Array(COLUMNS.length - 1).fill(52)];
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
 
-    // HEADER //
-    doc.fontSize(10).fillColor('#fff');
-    doc.rect(startX, y, totalWidth, 20).fill('#6E0D12');
+    // HEADER
+    const HEADER_H = 28;
+    doc.fontSize(8).fillColor('#fff');
+    doc.rect(startX, y, totalWidth, HEADER_H).fill('#6E0D12');
     doc.fillColor('#fff');
     let x = startX;
     COLUMNS.forEach((c, i) => {
       doc.text(c.label, x + 4, y + 5, { width: colWidths[i] - 8 });
       x += colWidths[i];
     });
-    y += 20;
+    y += HEADER_H;
 
-    // ROWS //
-    doc.fontSize(9);
+    // ROWS
+    doc.fontSize(8);
     formatted.forEach((row, idx) => {
       if (y > 550) {
         doc.addPage({ margin: 30, size: 'A4', layout: 'landscape' });

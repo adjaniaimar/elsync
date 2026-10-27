@@ -12,7 +12,7 @@ const { Server } = require('socket.io');
 const { Worker } = require('worker_threads');
 
 const modbus = require('./modbus');
-const { insertReading, getReadings, closePool } = require('./db');
+const { insertReading, getReadings, closeDb, DB_FILE } = require('./db');
 const { POLL_INTERVAL_MS, HTTP_PORT } = require('./config');
 
 const app = express();
@@ -262,9 +262,9 @@ async function startPolling() {
 
       try {
         await insertReading(reading);
-        console.log('[mysql] Reading saved:', reading);
+        console.log('[db] Reading saved:', reading);
       } catch (err) {
-        console.error('[mysql] Failed to save reading:', err.message);
+        console.error('[db] Failed to save reading:', err.message);
       }
 
       io.emit('meterData', reading);
@@ -296,6 +296,7 @@ io.on('connection', (socket) => {
 
 server.listen(HTTP_PORT, () => {
   console.log(`ELSYNC server running at http://localhost:${HTTP_PORT}`);
+  console.log(`[db] SQLite: ${DB_FILE}`);
   startPolling();
 });
 
@@ -312,7 +313,7 @@ async function shutdown(signal) {
   forceExit.unref();
 
   try { await modbus.close(); } catch (err) { console.error('[shutdown] modbus:', err.message); }
-  try { await closePool(); } catch (err) { console.error('[shutdown] db pool:', err.message); }
+  try { await closeDb(); } catch (err) { console.error('[shutdown] db:', err.message); }
   io.close();
   server.close(() => process.exit(0));
 }

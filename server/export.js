@@ -3,6 +3,7 @@ const PDFDocument = require('pdfkit');
 
 const COLUMNS = [
   { key: 'recorded_at', label: 'Timestamp' },
+  { key: 'panel_id', label: 'Panel' },
   { key: 'tegangan_r', label: 'Tegangan R (V)' },
   { key: 'tegangan_s', label: 'Tegangan S (V)' },
   { key: 'tegangan_t', label: 'Tegangan T (V)' },

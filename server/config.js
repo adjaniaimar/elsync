@@ -13,7 +13,10 @@ module.exports = {
   // HTTP SERVER
   HTTP_PORT: 3001,
 
-  SISTEM: '3P3W',
+  SISTEM: '3P4W',
+
+  // PANEL
+  PANEL_ID: 'panel-1',
 };
 
 // REGISTER MAP DTSU666 — R/S/T = phase A/B/C

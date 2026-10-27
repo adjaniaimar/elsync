@@ -1,26 +1,14 @@
-const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
+const { PANEL_ID } = require('./config');
 
-const DB_USER = process.env.DB_USER || 'root';
-const DB_PASS = process.env.DB_PASS || '';
+const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'data', 'elsync.db');
+fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 
-if (DB_USER === 'root' || DB_PASS === '') {
-  console.warn(
-    '[security] Database is using the root account and/or an empty password. ' +
-    'Create a dedicated MySQL user with only INSERT/SELECT on elsync_db and set ' +
-    'DB_USER/DB_PASS in server/.env.'
-  );
-}
-
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 3306,
-  user: DB_USER,
-  password: DB_PASS,
-  database: process.env.DB_NAME || 'elsync_db',
-  waitForConnections: true,
-  connectionLimit: 5,
-  queueLimit: 0
-});
+const db = new DatabaseSync(DB_FILE);
+db.exec('PRAGMA journal_mode = WAL');
+db.exec('PRAGMA busy_timeout = 5000');
 
 const COLUMNS_3P = [
   'tegangan_r', 'tegangan_s', 'tegangan_t',
@@ -30,24 +18,33 @@ const COLUMNS_3P = [
   'pf', 'frekuensi', 'kwh'
 ];
 
-async function insertReading(reading) {
-  const placeholders = COLUMNS_3P.map(() => '?').join(', ');
-  await pool.query(
-    `INSERT INTO readings_3p (${COLUMNS_3P.join(', ')}) VALUES (${placeholders})`,
-    COLUMNS_3P.map((c) => reading[c] ?? null)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS readings_3p (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    panel_id    TEXT NOT NULL,
+    ${COLUMNS_3P.map((c) => `${c} REAL`).join(',\n    ')},
+    recorded_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
+  CREATE INDEX IF NOT EXISTS idx_panel_time ON readings_3p (panel_id, recorded_at);
+`);
+
+const insertStmt = db.prepare(
+  `INSERT INTO readings_3p (panel_id, ${COLUMNS_3P.join(', ')}) VALUES (?, ${COLUMNS_3P.map(() => '?').join(', ')})`
+);
+const selectStmt = db.prepare(
+  `SELECT id, panel_id, ${COLUMNS_3P.join(', ')}, recorded_at FROM readings_3p ORDER BY recorded_at DESC LIMIT ?`
+);
+
+async function insertReading(reading) {
+  insertStmt.run(PANEL_ID, ...COLUMNS_3P.map((c) => reading[c] ?? null));
 }
 
 async function getReadings(limit = 1000) {
-  const [rows] = await pool.query(
-    `SELECT id, ${COLUMNS_3P.join(', ')}, recorded_at FROM readings_3p ORDER BY recorded_at DESC LIMIT ?`,
-    [limit]
-  );
-  return rows;
+  return selectStmt.all(limit).map((row) => ({ ...row }));
 }
 
-async function closePool() {
-  await pool.end();
+async function closeDb() {
+  try { db.close(); } catch { /* sudah tertutup */ }
 }
 
-module.exports = { insertReading, getReadings, closePool };
+module.exports = { insertReading, getReadings, closeDb, DB_FILE };

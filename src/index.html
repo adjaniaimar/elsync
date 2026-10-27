@@ -13,17 +13,28 @@
 <body>
 
   <aside class="sidebar">
-    <div class="brand">ELSYNC</div>
     <nav class="nav">
-      <button class="nav-item active" data-metric="all">DASHBOARD</button>
-      <button class="nav-item" data-metric="arus">ARUS</button>
-      <button class="nav-item" data-metric="frekuensi">FREKUENSI</button>
-      <button class="nav-item" data-metric="kwh">KWH</button>
-      <button class="nav-item" data-metric="daya">DAYA</button>
-      <button class="nav-item" data-metric="tegangan">TEGANGAN</button>
+      <button class="nav-item active" data-metric="all" data-label="DASHBOARD" aria-label="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button class="nav-item" data-metric="arus" data-label="ARUS" aria-label="Arus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+      </button>
+      <button class="nav-item" data-metric="frekuensi" data-label="FREKUENSI" aria-label="Frekuensi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c1.7-4 3.3-6 5-6s3.3 2 5 6 3.3 6 5 6 3.3-2 5-6"/></svg>
+      </button>
+      <button class="nav-item" data-metric="kwh" data-label="KWH" aria-label="kWh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+      </button>
+      <button class="nav-item" data-metric="daya" data-label="DAYA" aria-label="Daya">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </button>
+      <button class="nav-item" data-metric="tegangan" data-label="TEGANGAN" aria-label="Tegangan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>
+      </button>
     </nav>
-    <button class="logout-btn">
-      <span class="logout-arrow">&gt;</span> LOGOUT
+    <button class="logout-btn" data-label="LOGOUT" aria-label="Logout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
     </button>
   </aside>
 
@@ -60,7 +71,7 @@
       <div class="metric-card" data-metric="tegangan">
         <div class="metric-label">TEGANGAN</div>
         <div class="metric-value"><span id="val-tegangan">--</span><span class="metric-unit">V</span></div>
-        <div class="metric-sub"><span>R <b data-key="tegangan_r">--</b></span><span>S <b data-key="tegangan_s">--</b></span><span>T <b data-key="tegangan_t">--</b></span></div>
+        <div class="metric-sub"><span>R <b data-key="tegangan_r">--</b></span><span>S <b data-key="tegangan_s">--</b></span><span>T <b data-key="tegangan_t">--</b></span><span hidden>R-S <b data-key="tegangan_rs">--</b></span><span hidden>S-T <b data-key="tegangan_st">--</b></span><span hidden>T-R <b data-key="tegangan_tr">--</b></span></div>
       </div>
     </section>
 

@@ -189,7 +189,11 @@ function updateDashboard(reading){
   METRICS.forEach(m => {
     document.getElementById(`val-${m}`).textContent = reading[m];
   });
+  // Mode 3P4W kirim R/S/T, mode 3P3W kirim R-S/S-T/T-R: tampilkan yang ada di data.
+  // Saat kosong/disconnect (emptyReading) tampilan terakhir dipertahankan.
+  const isRealReading = 'daya_total' in reading;
   subValueEls.forEach(el => {
+    if (isRealReading) el.parentElement.hidden = !(el.dataset.key in reading);
     el.textContent = reading[el.dataset.key] ?? '--';
   });
 

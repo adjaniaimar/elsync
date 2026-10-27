@@ -24,6 +24,7 @@ const pool = mysql.createPool({
 
 const COLUMNS_3P = [
   'tegangan_r', 'tegangan_s', 'tegangan_t',
+  'tegangan_rs', 'tegangan_st', 'tegangan_tr',
   'arus_r', 'arus_s', 'arus_t',
   'daya_r', 'daya_s', 'daya_t', 'daya_total',
   'pf', 'frekuensi', 'kwh'
@@ -33,7 +34,7 @@ async function insertReading(reading) {
   const placeholders = COLUMNS_3P.map(() => '?').join(', ');
   await pool.query(
     `INSERT INTO readings_3p (${COLUMNS_3P.join(', ')}) VALUES (${placeholders})`,
-    COLUMNS_3P.map((c) => reading[c])
+    COLUMNS_3P.map((c) => reading[c] ?? null)
   );
 }
 

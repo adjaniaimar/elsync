@@ -94,7 +94,9 @@ async function readMetric(key, reg) {
 
 function addSummary(r) {
   const avg = (a, b, c) => +((a + b + c) / 3).toFixed(2);
-  r.tegangan = avg(r.tegangan_r, r.tegangan_s, r.tegangan_t);
+  r.tegangan = 'tegangan_r' in r
+    ? avg(r.tegangan_r, r.tegangan_s, r.tegangan_t)
+    : avg(r.tegangan_rs, r.tegangan_st, r.tegangan_tr);
   r.arus = avg(r.arus_r, r.arus_s, r.arus_t);
   r.daya = r.daya_total;
   return r;

@@ -6,6 +6,9 @@ const COLUMNS = [
   { key: 'tegangan_r', label: 'Tegangan R (V)' },
   { key: 'tegangan_s', label: 'Tegangan S (V)' },
   { key: 'tegangan_t', label: 'Tegangan T (V)' },
+  { key: 'tegangan_rs', label: 'Tegangan R-S (V)' },
+  { key: 'tegangan_st', label: 'Tegangan S-T (V)' },
+  { key: 'tegangan_tr', label: 'Tegangan T-R (V)' },
   { key: 'arus_r', label: 'Arus R (A)' },
   { key: 'arus_s', label: 'Arus S (A)' },
   { key: 'arus_t', label: 'Arus T (A)' },
@@ -24,6 +27,10 @@ function formatTimestamp(value) {
   if (isNaN(d.getTime())) return String(value);
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function activeColumns(rows) {
+  return COLUMNS.filter(c => rows.some(row => row[c.key] != null));
 }
 
 function prepareRows(rows) {
@@ -53,9 +60,10 @@ function csvCell(value) {
 
 function toCSV(rows) {
   const formatted = prepareRows(rows);
-  const header = COLUMNS.map(c => csvCell(c.label)).join(',');
+  const cols = activeColumns(rows);
+  const header = cols.map(c => csvCell(c.label)).join(',');
   const lines = formatted.map(row =>
-    COLUMNS.map(c => csvCell(row[c.key])).join(',')
+    cols.map(c => csvCell(row[c.key])).join(',')
   );
   return [header, ...lines].join('\n');
 }
@@ -66,7 +74,7 @@ async function toExcel(rows) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Log Polling');
 
-  sheet.columns = COLUMNS.map(c => ({ header: c.label, key: c.key, width: 16 }));
+  sheet.columns = activeColumns(rows).map(c => ({ header: c.label, key: c.key, width: 16 }));
   sheet.getRow(1).fill = {
     type: 'pattern',
     pattern: 'solid',
@@ -97,7 +105,9 @@ function toPDF(rows) {
 
     const startX = 30;
     let y = doc.y;
-    const colWidths = [104, ...Array(COLUMNS.length - 1).fill(52)];
+    const cols = activeColumns(rows);
+    const dataW = Math.min(60, (doc.page.width - 60 - 104) / (cols.length - 1));
+    const colWidths = [104, ...Array(cols.length - 1).fill(dataW)];
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
 
     // HEADER
@@ -106,7 +116,7 @@ function toPDF(rows) {
     doc.rect(startX, y, totalWidth, HEADER_H).fill('#6E0D12');
     doc.fillColor('#fff');
     let x = startX;
-    COLUMNS.forEach((c, i) => {
+    cols.forEach((c, i) => {
       doc.text(c.label, x + 4, y + 5, { width: colWidths[i] - 8 });
       x += colWidths[i];
     });
@@ -124,8 +134,8 @@ function toPDF(rows) {
       }
       doc.fillColor('#000');
       x = startX;
-      COLUMNS.forEach((c, i) => {
-        doc.text(String(row[c.key]), x + 4, y + 4, { width: colWidths[i] - 8, lineBreak: false });
+      cols.forEach((c, i) => {
+        doc.text(String(row[c.key] ?? ''), x + 4, y + 4, { width: colWidths[i] - 8, lineBreak: false });
         x += colWidths[i];
       });
       y += 18;

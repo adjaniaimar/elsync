@@ -4,13 +4,7 @@ const POLL_INTERVAL_MS = 10000;
 
 const METRICS = ['arus', 'frekuensi', 'kwh', 'daya', 'tegangan'];
 
-const METRIC_COLORS = {
-  arus: '#F4B183',
-  frekuensi: '#ED9455',
-  kwh: '#DE7C29',
-  daya: '#B85C1E',
-  tegangan: '#7A3B12'
-};
+const DEFAULT_CHART_METRIC = 'daya';
 
 const METRIC_UNITS = {
   arus: 'A',
@@ -20,112 +14,143 @@ const METRIC_UNITS = {
   tegangan: 'V'
 };
 
+const METRIC_DECIMALS = {
+  arus: 2,
+  frekuensi: 2,
+  kwh: 2,
+  daya: 0,
+  tegangan: 1
+};
+
 // RUNNING STATE
 const history = { arus: [], frekuensi: [], kwh: [], daya: [], tegangan: [] };
 const labels = [];
+let activeMetric = DEFAULT_CHART_METRIC;
+let chartPoints = [];
 
 // CHART SETUP
-const svg = document.getElementById('realtimeChart');
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const VIEW_W = 1000, VIEW_H = 260, PAD_TOP = 12, PAD_BOTTOM = 24, PAD_X = 4;
+const VIEW_W = 1000, VIEW_H = 300;
+const STEP_X = VIEW_W / (MAX_POINTS - 1);
 
-const visibleMetrics = new Set(METRICS);
+const chartPlot = document.getElementById('chartPlot');
+const chartGrid = document.getElementById('chartGrid');
+const chartLine = document.getElementById('chartLine');
+const chartArea = document.getElementById('chartArea');
+const chartYAxis = document.getElementById('chartYAxis');
+const chartLastDot = document.getElementById('chartLastDot');
+const chartHoverDot = document.getElementById('chartHoverDot');
+const chartCrosshair = document.getElementById('chartCrosshair');
+const chartMetricEl = document.getElementById('chartMetric');
+const chartValueEl = document.getElementById('chartValue');
+const chartUnitEl = document.getElementById('chartUnit');
+const statEls = {
+  min: document.getElementById('statMin'),
+  avg: document.getElementById('statAvg'),
+  max: document.getElementById('statMax')
+};
 
-// GRIDLINES
-function drawGrid(){
-  for (let i = 0; i <= 4; i++){
-    const y = PAD_TOP + (i / 4) * (VIEW_H - PAD_TOP - PAD_BOTTOM);
+function formatNumber(value, decimals){
+  return Number(value).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}
+
+function chartDomain(values){
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = (max - min) * 0.2 || Math.max(Math.abs(max) * 0.02, 1);
+  return [min - pad, max + pad];
+}
+
+function niceStep(range){
+  const raw = range / 5;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const n = raw / pow;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
+}
+
+function toY(value, lo, hi){
+  return (1 - (value - lo) / (hi - lo)) * VIEW_H;
+}
+
+function drawAxis(lo, hi){
+  chartGrid.innerHTML = '';
+  chartYAxis.innerHTML = '';
+  const step = niceStep(hi - lo);
+  const decimals = Math.max(0, -Math.floor(Math.log10(step)));
+  for (let t = Math.ceil(lo / step) * step; t <= hi; t += step){
+    const y = toY(t, lo, hi);
     const line = document.createElementNS(SVG_NS, 'line');
-    line.setAttribute('x1', PAD_X);
-    line.setAttribute('x2', VIEW_W - PAD_X);
+    line.setAttribute('x1', 0);
+    line.setAttribute('x2', VIEW_W);
     line.setAttribute('y1', y.toFixed(1));
     line.setAttribute('y2', y.toFixed(1));
-    line.setAttribute('stroke', '#EFEFEF');
-    line.setAttribute('stroke-width', '1');
-    svg.appendChild(line);
+    line.setAttribute('stroke', '#F0EDEA');
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    chartGrid.appendChild(line);
+
+    const label = document.createElement('span');
+    // Hindari label "-0" dari sisa pembulatan float
+    label.textContent = formatNumber(Math.abs(t) < step / 2 ? 0 : t, decimals);
+    label.style.top = (y / VIEW_H * 100) + '%';
+    chartYAxis.appendChild(label);
   }
 }
 
-const linePaths = {};
-METRICS.forEach(m => {
-  const path = document.createElementNS(SVG_NS, 'polyline');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', METRIC_COLORS[m]);
-  path.setAttribute('stroke-width', '2.5');
-  path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('stroke-linecap', 'round');
-  svg.appendChild(path);
-  linePaths[m] = path;
-});
+function smoothPath(points){
+  let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++){
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
 
-drawGrid();
-
-function normalize(values){
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = (max - min) || 1;
-  return values.map(v => 1 - (v - min) / range);
+function placeAt(el, point){
+  el.style.left = (point[0] / VIEW_W * 100) + '%';
+  el.style.top = (point[1] / VIEW_H * 100) + '%';
 }
 
 function redrawChart(){
-  METRICS.forEach(m => {
-    const data = history[m];
-    if (data.length < 2 || !visibleMetrics.has(m)){
-      linePaths[m].setAttribute('points', '');
-      linePaths[m].style.display = visibleMetrics.has(m) ? 'block' : 'none';
-      return;
-    }
-    linePaths[m].style.display = 'block';
-    const norm = normalize(data);
-    const step = (VIEW_W - PAD_X * 2) / (MAX_POINTS - 1);
-    const points = norm.map((v, idx) => {
-      const x = PAD_X + idx * step;
-      const y = PAD_TOP + v * (VIEW_H - PAD_TOP - PAD_BOTTOM);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-    linePaths[m].setAttribute('points', points.join(' '));
-  });
+  const data = history[activeMetric].map(Number);
+  const decimals = METRIC_DECIMALS[activeMetric];
+  chartMetricEl.textContent = activeMetric.toUpperCase();
+  chartUnitEl.textContent = METRIC_UNITS[activeMetric];
+  if (!data.length) return;
+
+  const unit = ' ' + METRIC_UNITS[activeMetric];
+  chartValueEl.textContent = formatNumber(data[data.length - 1], decimals);
+  statEls.min.textContent = formatNumber(Math.min(...data), decimals) + unit;
+  statEls.max.textContent = formatNumber(Math.max(...data), decimals) + unit;
+  statEls.avg.textContent = formatNumber(data.reduce((a, b) => a + b, 0) / data.length, decimals) + unit;
+
+  const [lo, hi] = chartDomain(data);
+  drawAxis(lo, hi);
+
+  chartPoints = data.map((v, i) => [i * STEP_X, toY(v, lo, hi)]);
+  const last = chartPoints[chartPoints.length - 1];
+  const line = smoothPath(chartPoints);
+  chartLine.setAttribute('d', line);
+  chartArea.setAttribute('d', `${line} L${last[0].toFixed(1)},${VIEW_H} L0,${VIEW_H} Z`);
+  placeAt(chartLastDot, last);
 }
 
-// LEGEND
-const legendEl = document.getElementById('chartLegend');
-METRICS.forEach(m => {
-  const item = document.createElement('div');
-  item.className = 'legend-item';
-  item.dataset.metric = m;
-  item.style.borderColor = METRIC_COLORS[m];
-  item.innerHTML = `<span class="legend-swatch" style="background:${METRIC_COLORS[m]}"></span>${m.toUpperCase()}`;
-  item.addEventListener('click', () => toggleMetric(m));
-  legendEl.appendChild(item);
-});
-
-function toggleMetric(metric){
-  if (visibleMetrics.has(metric)){
-    visibleMetrics.delete(metric);
-  } else {
-    visibleMetrics.add(metric);
-  }
-  legendEl.querySelector(`[data-metric="${metric}"]`).classList.toggle('hidden', !visibleMetrics.has(metric));
-  redrawChart();
-}
-
-function setVisibleMetrics(metrics){
-  visibleMetrics.clear();
-  metrics.forEach(m => visibleMetrics.add(m));
-  METRICS.forEach(m => {
-    legendEl.querySelector(`[data-metric="${m}"]`).classList.toggle('hidden', !visibleMetrics.has(m));
-  });
-  redrawChart();
-}
-
-// SIDEBAR FILTER
+// SIDEBAR / BOTTOM NAV
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(btn => {
   btn.addEventListener('click', () => {
-    navItems.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
     const metric = btn.dataset.metric;
-    setVisibleMetrics(metric === 'all' ? METRICS : [metric]);
+    navItems.forEach(b => b.classList.toggle('active', b.dataset.metric === metric));
+    activeMetric = metric === 'all' ? DEFAULT_CHART_METRIC : metric;
+    hideHover();
+    redrawChart();
   });
 });
 
@@ -139,19 +164,47 @@ document.querySelectorAll('.metric-card').forEach(card => {
 });
 
 // LOG TABLE
+const LOG_ROWS = 8;
+const HEAT_METRICS = ['arus', 'daya', 'tegangan'];
+
 const logBody = document.getElementById('logBody');
+const logRows = [];
+
 function pushLogRow(ts, reading){
-  const row = document.createElement('tr');
-  row.innerHTML = `
-    <td data-label="TIMESTAMP">${ts}</td>
-    <td data-label="ARUS">${reading.arus} A</td>
-    <td data-label="FREKUENSI">${reading.frekuensi} Hz</td>
-    <td data-label="KWH">${reading.kwh} kWh</td>
-    <td data-label="DAYA">${reading.daya} W</td>
-    <td data-label="TEGANGAN">${reading.tegangan} V</td>
-  `;
-  logBody.prepend(row);
-  while (logBody.children.length > 8) logBody.removeChild(logBody.lastChild);
+  logRows.unshift({ ts, reading });
+  if (logRows.length > LOG_ROWS) logRows.pop();
+  renderLog();
+}
+
+function deltaMark(value, prev){
+  if (prev === undefined || value === prev) return '<span class="log-delta same">•</span>';
+  return value > prev
+    ? '<span class="log-delta up">▲</span>'
+    : '<span class="log-delta down">▼</span>';
+}
+
+function renderLog(){
+  const ranges = {};
+  HEAT_METRICS.forEach(m => {
+    const values = logRows.map(r => Number(r.reading[m]));
+    ranges[m] = [Math.min(...values), Math.max(...values)];
+  });
+
+  logBody.innerHTML = logRows.map((row, i) => {
+    const older = logRows[i + 1];
+    const cells = METRICS.map(m => {
+      const value = Number(row.reading[m]);
+      const prev = older ? Number(older.reading[m]) : undefined;
+      let style = '';
+      if (ranges[m]){
+        const [min, max] = ranges[m];
+        const t = max > min ? (value - min) / (max - min) : 0;
+        style = ` style="background:rgba(110,13,18,${(0.04 + 0.26 * t).toFixed(3)})"`;
+      }
+      return `<td data-label="${m.toUpperCase()} (${METRIC_UNITS[m]})"><span class="log-cell"${style}>${formatNumber(value, METRIC_DECIMALS[m])}${deltaMark(value, prev)}</span></td>`;
+    }).join('');
+    return `<tr><td data-label="TIMESTAMP">${row.ts}</td>${cells}</tr>`;
+  }).join('');
 }
 
 // TIMESTAMP AXIS
@@ -189,8 +242,7 @@ function updateDashboard(reading){
   METRICS.forEach(m => {
     document.getElementById(`val-${m}`).textContent = reading[m];
   });
-  // Mode 3P4W kirim R/S/T, mode 3P3W kirim R-S/S-T/T-R: tampilkan yang ada di data.
-  // Saat kosong/disconnect (emptyReading) tampilan terakhir dipertahankan.
+
   const isRealReading = 'daya_total' in reading;
   subValueEls.forEach(el => {
     if (isRealReading) el.parentElement.hidden = !(el.dataset.key in reading);
@@ -237,40 +289,35 @@ if (typeof io !== 'undefined') {
 }
 
 // CHART HOVER TOOLTIP
-const hitlayer = document.getElementById('chartHitlayer');
 const tooltip = document.getElementById('chartTooltip');
 
-hitlayer.addEventListener('mousemove', (e) => {
-  const rect = hitlayer.getBoundingClientRect();
-  const xRatio = (e.clientX - rect.left) / rect.width;
-  const maxIdx = MAX_POINTS - 1;
-  const idx = Math.max(0, Math.min(maxIdx, Math.round(xRatio * maxIdx)));
+function hideHover(){
+  tooltip.style.display = 'none';
+  chartHoverDot.style.display = 'none';
+  chartCrosshair.style.display = 'none';
+}
 
-  if (idx >= labels.length){
-    tooltip.style.display = 'none';
+chartPlot.addEventListener('mousemove', (e) => {
+  const rect = chartPlot.getBoundingClientRect();
+  const xRatio = (e.clientX - rect.left) / rect.width;
+  const idx = Math.max(0, Math.min(MAX_POINTS - 1, Math.round(xRatio * (MAX_POINTS - 1))));
+  const point = chartPoints[idx];
+  if (!point){
+    hideHover();
     return;
   }
 
-  let html = '';
-  METRICS.forEach(m => {
-    if (!visibleMetrics.has(m)) return;
-    const val = history[m][idx];
-    if (val === undefined) return;
-    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-      <span style="width:7px;height:7px;border-radius:50%;background:${METRIC_COLORS[m]}"></span>
-      ${val} ${METRIC_UNITS[m]}
-    </div>`;
-  });
-  tooltip.innerHTML = html || 'No data';
-
-  const xPercent = (idx / maxIdx) * 100;
-  tooltip.style.left = xPercent + '%';
-  tooltip.style.display = 'block';
+  tooltip.innerHTML = `<span class="chart-tooltip-time">${labels[idx]}</span>
+    <span>${formatNumber(history[activeMetric][idx], METRIC_DECIMALS[activeMetric])} ${METRIC_UNITS[activeMetric]}</span>`;
+  placeAt(tooltip, point);
+  placeAt(chartHoverDot, point);
+  chartCrosshair.style.left = tooltip.style.left;
+  tooltip.style.display = 'flex';
+  chartHoverDot.style.display = 'block';
+  chartCrosshair.style.display = 'block';
 });
 
-hitlayer.addEventListener('mouseleave', () => {
-  tooltip.style.display = 'none';
-});
+chartPlot.addEventListener('mouseleave', hideHover);
 
 // LOGOUT
 document.querySelectorAll('.logout-btn').forEach(btn => {

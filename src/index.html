@@ -75,51 +75,84 @@
       </div>
     </section>
 
-    <h2 class="section-title">REAL TIME DATA</h2>
-    <section class="chart-panel">
-      <div style="position:relative">
-        <svg id="realtimeChart" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
-        <div id="disconnectedOverlay" class="disconnected-overlay">Disconnected</div>
-        <div class="chart-tooltip" id="chartTooltip"></div>
-        <svg id="chartHitlayer" class="chart-hitlayer" viewBox="0 0 1000 260" preserveAspectRatio="none">
-          <rect x="0" y="0" width="1000" height="260" fill="transparent"/>
-        </svg>
+    <section class="section">
+      <h2 class="section-title">REAL TIME DATA</h2>
+      <div class="chart-panel">
+        <div class="chart-head">
+          <div class="chart-current">
+            <div class="chart-metric" id="chartMetric">DAYA</div>
+            <div class="chart-value"><span id="chartValue">--</span><span class="chart-unit" id="chartUnit">W</span></div>
+          </div>
+          <div class="chart-stats">
+            <div><div class="chart-stat-label">MIN</div><div class="chart-stat-value" id="statMin">--</div></div>
+            <div><div class="chart-stat-label">RATA-RATA</div><div class="chart-stat-value" id="statAvg">--</div></div>
+            <div><div class="chart-stat-label">MAX</div><div class="chart-stat-value" id="statMax">--</div></div>
+          </div>
+        </div>
+        <div class="chart-body">
+          <div class="chart-yaxis" id="chartYAxis"></div>
+          <div class="chart-plot" id="chartPlot">
+            <svg id="realtimeChart" viewBox="0 0 1000 300" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#6E0D12" stop-opacity="0.24"/>
+                  <stop offset="1" stop-color="#6E0D12" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <g id="chartGrid"></g>
+              <path id="chartArea" fill="url(#chartFill)"/>
+              <path id="chartLine" fill="none" stroke="#6E0D12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <div class="chart-crosshair" id="chartCrosshair"></div>
+            <div class="chart-dot chart-dot-hover" id="chartHoverDot"></div>
+            <div class="chart-dot chart-dot-last" id="chartLastDot"></div>
+            <div class="chart-tooltip" id="chartTooltip"></div>
+            <div id="disconnectedOverlay" class="disconnected-overlay">Disconnected</div>
+          </div>
+        </div>
+        <div class="chart-timestamps" id="chartTimestamps"></div>
       </div>
-      <div class="chart-timestamps" id="chartTimestamps"></div>
-      <div class="chart-legend" id="chartLegend"></div>
     </section>
 
-    <div class="section-title-row">
-  <h2 class="section-title">LOG POLLING</h2>
-  <div class="export-control" id="exportControl">
-    <button class="export-btn" id="exportBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-      EXPORT
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div class="export-menu" id="exportMenu">
-      <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
-      <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
-      <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
-      <button class="export-option" data-format="pdf"><span class="badge pdf">PDF</span> Export as PDF</button>
-    </div>
-  </div>
-</div>
-    <section class="log-panel">
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th>TIMESTAMP</th>
-            <th>ARUS</th>
-            <th>FREKUENSI</th>
-            <th>KWH</th>
-            <th>DAYA</th>
-            <th>TEGANGAN</th>
-          </tr>
-        </thead>
-        <tbody id="logBody">
-        </tbody>
-      </table>
+    <section class="section">
+      <div class="section-title-row">
+        <h2 class="section-title">LOG POLLING</h2>
+        <div class="log-actions">
+          <div class="log-legend">
+            <span><b>▲</b> naik · ▼ turun</span>
+            <span class="log-scale">Rendah<i></i>Tinggi</span>
+          </div>
+          <div class="export-control" id="exportControl">
+            <button class="export-btn" id="exportBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+              EXPORT
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="export-menu" id="exportMenu">
+              <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
+              <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
+              <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
+              <button class="export-option" data-format="pdf"><span class="badge pdf">PDF</span> Export as PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="log-panel">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>TIMESTAMP</th>
+              <th>ARUS<small>A</small></th>
+              <th>FREKUENSI<small>Hz</small></th>
+              <th>KWH<small>kWh</small></th>
+              <th>DAYA<small>W</small></th>
+              <th>TEGANGAN<small>V</small></th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 
@@ -132,7 +165,7 @@
     <button class="nav-item" data-metric="tegangan">TEGANGAN</button>
   </nav>
 
- <!-- FOOTER -->
+  <!-- FOOTER -->
   <footer class="page-footer">
     <span>Made with art by&nbsp;</span><strong>Nevillaz</strong>
   </footer>

@@ -32,6 +32,12 @@
       <button class="nav-item" data-metric="tegangan" data-label="TEGANGAN" aria-label="Tegangan">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>
       </button>
+      <button class="nav-item" data-metric="history" data-label="HISTORY" aria-label="History">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+      </button>
+      <button class="nav-item" data-metric="billing" data-label="BILLING" aria-label="Billing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2V3z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>
+      </button>
     </nav>
     <button class="logout-btn" data-label="LOGOUT" aria-label="Logout">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -45,7 +51,7 @@
     </button>
   </header>
 
-  <main class="content">
+  <main class="content" id="dashboardPage">
     <h1 class="page-title">DASHBOARD</h1>
 
     <section class="card-row">
@@ -77,7 +83,7 @@
 
     <section class="section">
       <h2 class="section-title">REAL TIME DATA</h2>
-      <div class="chart-panel">
+      <div class="chart-panel is-all" id="chartPanel">
         <div class="chart-head">
           <div class="chart-current">
             <div class="chart-metric" id="chartMetric">DAYA</div>
@@ -95,13 +101,15 @@
             <svg id="realtimeChart" viewBox="0 0 1000 300" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#6E0D12" stop-opacity="0.24"/>
-                  <stop offset="1" stop-color="#6E0D12" stop-opacity="0"/>
+                  <stop offset="0" stop-opacity="0.24"/>
+                  <stop offset="1" stop-opacity="0"/>
                 </linearGradient>
               </defs>
               <g id="chartGrid"></g>
               <path id="chartArea" fill="url(#chartFill)"/>
-              <path id="chartLine" fill="none" stroke="#6E0D12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+              <path id="chartLine" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+              <g id="chartMultiAreas"></g>
+              <g id="chartMultiLines"></g>
             </svg>
             <div class="chart-crosshair" id="chartCrosshair"></div>
             <div class="chart-dot chart-dot-hover" id="chartHoverDot"></div>
@@ -111,6 +119,7 @@
           </div>
         </div>
         <div class="chart-timestamps" id="chartTimestamps"></div>
+        <div class="chart-legend" id="chartLegend"></div>
       </div>
     </section>
 
@@ -122,13 +131,13 @@
             <span><b>▲</b> naik · ▼ turun</span>
             <span class="log-scale">Rendah<i></i>Tinggi</span>
           </div>
-          <div class="export-control" id="exportControl">
-            <button class="export-btn" id="exportBtn">
+          <div class="export-control">
+            <button class="export-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
               EXPORT
               <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </button>
-            <div class="export-menu" id="exportMenu">
+            <div class="export-menu">
               <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
               <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
               <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
@@ -156,6 +165,78 @@
     </section>
   </main>
 
+  <main class="content" id="historyPage" hidden>
+    <h1 class="page-title">HISTORY</h1>
+
+    <div class="history-bar">
+      <div class="pill-group" id="historyMetrics" role="group" aria-label="Pilih data">
+        <button class="active" data-value="kwh">KWH</button>
+        <button data-value="arus">ARUS</button>
+        <button data-value="frekuensi">FREKUENSI</button>
+        <button data-value="daya">DAYA</button>
+        <button data-value="tegangan">TEGANGAN</button>
+      </div>
+      <div class="history-actions">
+        <div class="pill-group" id="historyRanges" role="group" aria-label="Pilih rentang waktu">
+          <button class="active" data-value="1H">1H</button>
+          <button data-value="3H">3H</button>
+          <button data-value="12H">12H</button>
+          <button data-value="1D">1D</button>
+          <button data-value="1W">1W</button>
+          <button data-value="1M">1M</button>
+        </div>
+        <div class="export-control" id="historyExport">
+          <button class="export-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            EXPORT
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="export-menu">
+            <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
+            <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
+            <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
+            <button class="export-option" data-format="pdf"><span class="badge pdf">PDF</span> Export as PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-panel">
+      <table class="log-table">
+        <thead><tr id="historyHead"></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <div class="history-message" id="historyMessage" hidden></div>
+    </div>
+  </main>
+
+  <main class="content" id="billingPage" hidden>
+    <h1 class="page-title">BILLING</h1>
+
+    <div class="history-bar">
+      <div class="pill-group" id="billingYears" role="group" aria-label="Pilih tahun">
+        <button class="active" data-value="2026">2026</button>
+        <button data-value="2027">2027</button>
+      </div>
+      <div class="export-control" id="billingExport">
+        <button class="export-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          EXPORT
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="export-menu">
+          <button class="export-option" data-format="json"><span class="badge json">JSON</span> Export as JSON</button>
+          <button class="export-option" data-format="csv"><span class="badge csv">CSV</span> Export as CSV</button>
+          <button class="export-option" data-format="xlsx"><span class="badge xlsx">XLS</span> Export as Excel</button>
+          <button class="export-option" data-format="pdf"><span class="badge pdf">PDF</span> Export as PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="receipt-grid" id="billingGrid"></section>
+    <div class="history-message" id="billingMessage" hidden></div>
+  </main>
+
   <nav class="bottom-nav">
     <button class="nav-item active" data-metric="all">DASHBOARD</button>
     <button class="nav-item" data-metric="arus">ARUS</button>
@@ -163,14 +244,17 @@
     <button class="nav-item" data-metric="kwh">KWH</button>
     <button class="nav-item" data-metric="daya">DAYA</button>
     <button class="nav-item" data-metric="tegangan">TEGANGAN</button>
+    <button class="nav-item" data-metric="history">HISTORY</button>
+    <button class="nav-item" data-metric="billing">BILLING</button>
   </nav>
 
   <!-- FOOTER -->
   <footer class="page-footer">
-    <span>Made with art by&nbsp;</span><strong>Nevillaz</strong>
+    <span>Made with Art by&nbsp;</span><strong>Nevillaz</strong>
   </footer>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="testing.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

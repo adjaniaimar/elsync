@@ -12,7 +12,17 @@ const { Server } = require('socket.io');
 const { Worker } = require('worker_threads');
 
 const modbus = require('./modbus');
-const { insertReading, getReadings, closeDb, DB_FILE } = require('./db');
+const {
+  insertReading,
+  getReadings,
+  getHistory,
+  HISTORY_METRICS,
+  HISTORY_RANGES,
+  getBilling,
+  BILLING_YEARS,
+  closeDb,
+  DB_FILE,
+} = require('./db');
 const { POLL_INTERVAL_MS, HTTP_PORT } = require('./config');
 
 const app = express();
@@ -153,6 +163,51 @@ app.get('/', (req, res) => {
 const ALLOWED_FORMATS = new Set(['json', 'csv', 'xlsx', 'pdf']);
 const EXPORT_TIMEOUT_MS = 30000;
 
+function sendExport(res, { format, rows, filename, options }) {
+  const worker = new Worker(path.join(__dirname, 'exportWorker.js'), {
+    workerData: { format, rows, options },
+  });
+
+  let settled = false;
+  const finish = (respond) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    worker.terminate();
+    respond();
+  };
+
+  const timer = setTimeout(() => {
+    console.error('[export] Worker timed out after', EXPORT_TIMEOUT_MS, 'ms');
+    finish(() => res.status(503).json({ message: 'Export timeout' }));
+  }, EXPORT_TIMEOUT_MS);
+
+  worker.once('message', (msg) => {
+    if (!msg.success) {
+      console.error('[export] Worker error:', msg.error);
+      return finish(() => res.status(500).json({ message: 'Export gagal' }));
+    }
+
+    const contentTypes = {
+      json: 'application/json',
+      csv: 'text/csv',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      pdf: 'application/pdf',
+    };
+
+    finish(() => {
+      res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
+      res.send(msg.type === 'buffer' ? Buffer.from(msg.data) : msg.data);
+    });
+  });
+
+  worker.once('error', (err) => {
+    console.error('[export] Worker crashed:', err.message);
+    finish(() => res.status(500).json({ message: 'Export gagal' }));
+  });
+}
+
 app.get('/api/logs/export', requireAuth, async (req, res) => {
   try {
     const format = String(req.query.format || 'json').toLowerCase();
@@ -161,52 +216,132 @@ app.get('/api/logs/export', requireAuth, async (req, res) => {
     }
 
     const rows = await getReadings();
-    const filename = `elsync-log-${Date.now()}`;
-
-    const worker = new Worker(path.join(__dirname, 'exportWorker.js'), {
-      workerData: { format, rows },
-    });
-
-    let settled = false;
-    const finish = (respond) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      worker.terminate();
-      respond();
-    };
-
-    const timer = setTimeout(() => {
-      console.error('[export] Worker timed out after', EXPORT_TIMEOUT_MS, 'ms');
-      finish(() => res.status(503).json({ message: 'Export timeout' }));
-    }, EXPORT_TIMEOUT_MS);
-
-    worker.once('message', (msg) => {
-      if (!msg.success) {
-        console.error('[export] Worker error:', msg.error);
-        return finish(() => res.status(500).json({ message: 'Export gagal' }));
-      }
-
-      const contentTypes = {
-        json: 'application/json',
-        csv: 'text/csv',
-        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        pdf: 'application/pdf',
-      };
-
-      finish(() => {
-        res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
-        res.send(msg.type === 'buffer' ? Buffer.from(msg.data) : msg.data);
-      });
-    });
-
-    worker.once('error', (err) => {
-      console.error('[export] Worker crashed:', err.message);
-      finish(() => res.status(500).json({ message: 'Export gagal' }));
-    });
+    sendExport(res, { format, rows, filename: `elsync-log-${Date.now()}` });
   } catch (err) {
     console.error('[export] Error:', err.message);
+    res.status(500).json({ message: 'Export gagal' });
+  }
+});
+
+// HISTORY
+function parseHistoryQuery(req) {
+  const metric = String(req.query.metric || '');
+  const range = String(req.query.range || '');
+  if (!Object.hasOwn(HISTORY_METRICS, metric) || !Object.hasOwn(HISTORY_RANGES, range)) return null;
+  return { metric, range };
+}
+
+function historyColumns(metric) {
+  const { label } = HISTORY_METRICS[metric];
+  const unit = label.match(/\((.+)\)/)[1];
+  const time = { key: 'recorded_at', label: 'Timestamp' };
+  if (metric === 'kwh') {
+    return [time, { key: 'value', label }, { key: 'delta', label: `Konsumsi (${unit})` }];
+  }
+  return [
+    time,
+    { key: 'value', label: `${label.split(' ')[0]} Rata-rata (${unit})` },
+    { key: 'min', label: `Min (${unit})` },
+    { key: 'max', label: `Maks (${unit})` },
+  ];
+}
+
+app.get('/api/history', requireAuth, async (req, res) => {
+  try {
+    const query = parseHistoryQuery(req);
+    if (!query) return res.status(400).json({ message: 'Metric atau range tidak dikenali' });
+    res.json({ ...query, rows: await getHistory(query.metric, query.range) });
+  } catch (err) {
+    console.error('[history] Error:', err.message);
+    res.status(500).json({ message: 'Gagal memuat history' });
+  }
+});
+
+app.get('/api/history/export', requireAuth, async (req, res) => {
+  try {
+    const query = parseHistoryQuery(req);
+    const format = String(req.query.format || 'json').toLowerCase();
+    if (!query || !ALLOWED_FORMATS.has(format)) {
+      return res.status(400).json({ message: 'Parameter export tidak dikenali' });
+    }
+
+    const rows = await getHistory(query.metric, query.range);
+    if (!rows.length) return res.status(404).json({ message: 'Tidak ada data untuk diexport' });
+
+    sendExport(res, {
+      format,
+      rows,
+      filename: `elsync-history-${query.metric}-${query.range}-${Date.now()}`,
+      options: { columns: historyColumns(query.metric), title: `History ${query.metric.toUpperCase()} ${query.range}` },
+    });
+  } catch (err) {
+    console.error('[history] Export error:', err.message);
+    res.status(500).json({ message: 'Export gagal' });
+  }
+});
+
+// BILLING
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const BILLING_COLUMNS = [
+  { key: 'bulan', label: 'Bulan' },
+  { key: 'status', label: 'Status' },
+  { key: 'start', label: 'Meter Awal (kWh)' },
+  { key: 'end', label: 'Meter Akhir (kWh)' },
+  { key: 'usage', label: 'Pemakaian (kWh)' },
+  { key: 'tariff', label: 'Tarif (Rp/kWh)' },
+  { key: 'total', label: 'Total (Rp)' },
+];
+
+function parseBillingYear(req) {
+  const year = Number(req.query.year);
+  return BILLING_YEARS.includes(year) ? year : null;
+}
+
+app.get('/api/billing', requireAuth, async (req, res) => {
+  try {
+    const year = parseBillingYear(req);
+    if (!year) return res.status(400).json({ message: 'Tahun tidak dikenali' });
+    res.json(await getBilling(year));
+  } catch (err) {
+    console.error('[billing] Error:', err.message);
+    res.status(500).json({ message: 'Gagal memuat billing' });
+  }
+});
+
+app.get('/api/billing/export', requireAuth, async (req, res) => {
+  try {
+    const year = parseBillingYear(req);
+    const format = String(req.query.format || 'json').toLowerCase();
+    if (!year || !ALLOWED_FORMATS.has(format)) {
+      return res.status(400).json({ message: 'Parameter export tidak dikenali' });
+    }
+
+    const { tariff, months } = await getBilling(year);
+    const rows = months
+      .filter((m) => m.status !== 'kosong')
+      .map((m) => ({
+        bulan: `${MONTH_NAMES[m.month - 1]} ${year}`,
+        status: m.status === 'berjalan' ? 'Berjalan' : 'Selesai',
+        start: m.start,
+        end: m.end,
+        usage: m.usage,
+        tariff,
+        total: m.total,
+      }));
+    if (!rows.length) return res.status(404).json({ message: 'Tidak ada data untuk diexport' });
+
+    sendExport(res, {
+      format,
+      rows,
+      filename: `elsync-billing-${year}-${Date.now()}`,
+      options: { columns: BILLING_COLUMNS, title: `Billing ${year}` },
+    });
+  } catch (err) {
+    console.error('[billing] Export error:', err.message);
     res.status(500).json({ message: 'Export gagal' });
   }
 });

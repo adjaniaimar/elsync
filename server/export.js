@@ -30,15 +30,14 @@ function formatTimestamp(value) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function activeColumns(rows) {
-  return COLUMNS.filter(c => rows.some(row => row[c.key] != null));
+function activeColumns(rows, columns = COLUMNS) {
+  return columns.filter(c => rows.some(row => row[c.key] != null));
 }
 
 function prepareRows(rows) {
-  return rows.map(row => ({
-    ...row,
-    recorded_at: formatTimestamp(row.recorded_at),
-  }));
+  return rows.map(row => (
+    row.recorded_at == null ? row : { ...row, recorded_at: formatTimestamp(row.recorded_at) }
+  ));
 }
 
 // JSON
@@ -59,9 +58,9 @@ function csvCell(value) {
   return s;
 }
 
-function toCSV(rows) {
+function toCSV(rows, { columns } = {}) {
   const formatted = prepareRows(rows);
-  const cols = activeColumns(rows);
+  const cols = activeColumns(rows, columns);
   const header = cols.map(c => csvCell(c.label)).join(',');
   const lines = formatted.map(row =>
     cols.map(c => csvCell(row[c.key])).join(',')
@@ -70,12 +69,12 @@ function toCSV(rows) {
 }
 
 // EXCEL
-async function toExcel(rows) {
+async function toExcel(rows, { columns, title = 'Log Polling' } = {}) {
   const formatted = prepareRows(rows);
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Log Polling');
+  const sheet = workbook.addWorksheet(title);
 
-  sheet.columns = activeColumns(rows).map(c => ({ header: c.label, key: c.key, width: 16 }));
+  sheet.columns = activeColumns(rows, columns).map(c => ({ header: c.label, key: c.key, width: 16 }));
   sheet.getRow(1).fill = {
     type: 'pattern',
     pattern: 'solid',
@@ -89,7 +88,7 @@ async function toExcel(rows) {
 }
 
 // PDF
-function toPDF(rows) {
+function toPDF(rows, { columns, title = 'Log Polling' } = {}) {
   const formatted = prepareRows(rows);
 
   return new Promise((resolve, reject) => {
@@ -99,14 +98,14 @@ function toPDF(rows) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    doc.fontSize(16).fillColor('#6E0D12').text('ELSYNC — Log Polling Export', { align: 'left' });
+    doc.fontSize(16).fillColor('#6E0D12').text(`ELSYNC — ${title} Export`, { align: 'left' });
     doc.moveDown(0.5);
     doc.fontSize(9).fillColor('#444').text(`Generated: ${formatTimestamp(new Date())}`);
     doc.moveDown(1);
 
     const startX = 30;
     let y = doc.y;
-    const cols = activeColumns(rows);
+    const cols = activeColumns(rows, columns);
     const dataW = Math.min(60, (doc.page.width - 60 - 104) / (cols.length - 1));
     const colWidths = [104, ...Array(cols.length - 1).fill(dataW)];
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);

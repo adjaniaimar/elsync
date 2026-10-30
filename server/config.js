@@ -18,6 +18,9 @@ module.exports = {
 
   // PANEL
   PANEL_ID: 'panel-1',
+
+  // BILLING
+  BILLING_TARIFF_PER_KWH: null,
 };
 
 // REGISTER MAP DTSU666 — R/S/T = phase A/B/C

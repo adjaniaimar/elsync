@@ -4,6 +4,14 @@ const { METER_HOST, METER_PORT, MODBUS_MODE, SLAVE_ID, MODBUS_TIMEOUT_MS, REGIST
 const client = new ModbusRTU();
 let connected = false;
 let stopping = false;
+let ctRatio = 1;
+
+async function readCtRatio() {
+  const res = await client.readHoldingRegisters(0x0006, 1);
+  const irat = res.data[0];
+  if (!irat) throw new Error('IrAt terbaca 0');
+  ctRatio = irat;
+}
 
 function openConnection() {
   const opts = { port: METER_PORT };
@@ -21,9 +29,11 @@ async function connect() {
       await openConnection();
       client.setID(SLAVE_ID);
       client.setTimeout(MODBUS_TIMEOUT_MS);
+      await readCtRatio();
       connected = true;
-      console.log(`[modbus] Connected ke ${METER_HOST}:${METER_PORT} (${MODBUS_MODE}), slave id ${SLAVE_ID} (percobaan ke-${attempt})`);
+      console.log(`[modbus] Connected ke ${METER_HOST}:${METER_PORT} (${MODBUS_MODE}), slave id ${SLAVE_ID}, rasio CT (IrAt) ${ctRatio} (percobaan ke-${attempt})`);
     } catch (err) {
+      await closeClient();
       console.error(`[modbus] Percobaan ke-${attempt} gagal connect ${METER_HOST}:${METER_PORT}: ${err.message}`);
       console.error(`[modbus] Cek: DR302 menyala, kabel LAN, IP/port di config.js, dan PC satu subnet dengan DR302. Coba lagi dalam ${RETRY_DELAY_MS / 1000} detik...`);
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
@@ -88,7 +98,7 @@ async function readMetric(key, reg) {
     value = result.data[0];
   }
 
-  value = value * (reg.scale ?? 1);
+  value = value * (reg.scale ?? 1) * (reg.kaliCT ? ctRatio : 1);
   return +value.toFixed(reg.decimals ?? 2);
 }
 

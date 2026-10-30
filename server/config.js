@@ -1,4 +1,5 @@
 const f32 = (address, scale, decimals = 2) => ({ address, length: 2, byteOrder: 'ABCD', scale, decimals });
+const ct = (reg) => ({ ...reg, kaliCT: true });
 
 module.exports = {
   METER_HOST: '192.168.0.7',
@@ -21,10 +22,10 @@ module.exports = {
 
 // REGISTER MAP DTSU666 — R/S/T = phase A/B/C
 const COMMON = {
-  arus_r:     f32(0x200C, 0.001, 3),
-  arus_s:     f32(0x200E, 0.001, 3),
-  arus_t:     f32(0x2010, 0.001, 3),
-  daya_total: f32(0x2012, 0.1),
+  arus_r:     ct(f32(0x200C, 0.001, 3)),
+  arus_s:     ct(f32(0x200E, 0.001, 3)),
+  arus_t:     ct(f32(0x2010, 0.001, 3)),
+  daya_total: ct(f32(0x2012, 0.1)),
   pf:         f32(0x202A, 0.001, 3),
   frekuensi:  f32(0x2044, 0.01),
   kwh:        f32(0x401E, 1)
@@ -35,9 +36,9 @@ const PER_SISTEM = {
     tegangan_r: f32(0x2006, 0.1),
     tegangan_s: f32(0x2008, 0.1),
     tegangan_t: f32(0x200A, 0.1),
-    daya_r:     f32(0x2014, 0.1),
-    daya_s:     f32(0x2016, 0.1),
-    daya_t:     f32(0x2018, 0.1)
+    daya_r:     ct(f32(0x2014, 0.1)),
+    daya_s:     ct(f32(0x2016, 0.1)),
+    daya_t:     ct(f32(0x2018, 0.1))
   },
   
   '3P3W': {

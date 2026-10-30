@@ -14,7 +14,7 @@ module.exports = {
   // HTTP SERVER
   HTTP_PORT: 3001,
 
-  SISTEM: '3P4W',
+  SISTEM: '3P3W',
 
   // PANEL
   PANEL_ID: 'panel-1',
@@ -28,7 +28,7 @@ const COMMON = {
   daya_total: ct(f32(0x2012, 0.1)),
   pf:         f32(0x202A, 0.001, 3),
   frekuensi:  f32(0x2044, 0.01),
-  kwh:        f32(0x401E, 1)
+  kwh:        ct(f32(0x401E, 1))
 };
 
 const PER_SISTEM = {
